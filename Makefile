@@ -3,13 +3,9 @@ GO := go
 gotestsum := go run gotest.tools/gotestsum@latest
 
 generate:
-	go get github.com/raito-io/enumer
 	go generate ./...
 
-wire:
-	go run github.com/google/wire/cmd/wire ./...
-
-build: generate wire
+build: generate
 	go build ./...
 
 unit-test:
