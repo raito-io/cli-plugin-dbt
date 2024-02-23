@@ -2,14 +2,12 @@ module cli-plugin-dbt
 
 go 1.22
 
-replace github.com/raito-io/cli => ../cli
-
 require (
 	github.com/aws/smithy-go v1.20.1
 	github.com/hashicorp/go-hclog v1.6.2
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/raito-io/bexpression v0.1.1
-	github.com/raito-io/cli v0.57.0
+	github.com/raito-io/cli v0.61.0-dev.0
 	github.com/raito-io/golang-set v0.0.4
 	github.com/raito-io/sdk v0.0.5-dev.3
 	github.com/stretchr/testify v1.8.4
