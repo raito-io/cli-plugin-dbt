@@ -47,12 +47,7 @@ func NewDbtService(ctx context.Context, config *DbtConfig, logger hclog.Logger) 
 	clientOptions := make([]func(options *sdk.ClientOptions), 0, 1)
 
 	if config.URLOverride != nil {
-		urlOverride := *config.URLOverride
-		if strings.HasSuffix(urlOverride, "/") {
-			urlOverride = urlOverride[:len(urlOverride)-1]
-		}
-
-		clientOptions = append(clientOptions, sdk.WithUrlOverride(urlOverride))
+		clientOptions = append(clientOptions, sdk.WithUrlOverride(strings.TrimSuffix(*config.URLOverride, "/")))
 	}
 
 	client := sdk.NewClient(ctx, config.Domain, config.ApiUser, config.ApiSecret, clientOptions...)
@@ -190,7 +185,12 @@ func (s *DbtService) createAndUpdateAccessProviders(ctx context.Context, grants 
 
 			s.logger.Debug(fmt.Sprintf("delete access provider %q", oldAp))
 
-			return s.accessProviderClient.DeleteAccessProvider(ctx, oldAp, services.WithAccessProviderOverrideLocks())
+			err = s.accessProviderClient.DeleteAccessProvider(ctx, oldAp, services.WithAccessProviderOverrideLocks())
+			if err != nil {
+				return fmt.Errorf("delete access provider %q: %w", oldAp, err)
+			}
+
+			return nil
 		})
 	}
 
@@ -199,7 +199,11 @@ func (s *DbtService) createAndUpdateAccessProviders(ctx context.Context, grants 
 	close(logChannel)
 	logWg.Wait()
 
-	return addedResource, updatedResource, deletedResources, failures, err
+	if err != nil {
+		return addedResource, updatedResource, deletedResources, failures, fmt.Errorf("worker pool errors: %w", err)
+	}
+
+	return addedResource, updatedResource, deletedResources, failures, nil
 }
 
 func (s *DbtService) loadExistingAps(ctx context.Context, grants map[string]*sdkTypes.AccessProviderInput, filters map[string]*sdkTypes.AccessProviderInput, masks map[string]*sdkTypes.AccessProviderInput) (map[string]string, map[string]string, map[string]string, set.Set[string], error) {
