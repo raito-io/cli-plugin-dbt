@@ -2,6 +2,7 @@ package workerpool
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/go-multierror"
 )
@@ -41,5 +42,10 @@ func (wp *WorkerPool) Go(fn func() error) {
 }
 
 func (wp *WorkerPool) Wait() error {
-	return wp.wg.Wait().ErrorOrNil()
+	err := wp.wg.Wait().ErrorOrNil()
+	if err != nil {
+		return fmt.Errorf("execution errors: %w", err)
+	}
+
+	return nil
 }
