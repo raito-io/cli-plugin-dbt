@@ -5,7 +5,10 @@ gotestsum := go run gotest.tools/gotestsum@latest
 generate:
 	go generate ./...
 
-build: generate
+wire:
+	go run github.com/google/wire/cmd/wire ./...
+
+build: generate wire
 	go build ./...
 
 unit-test:

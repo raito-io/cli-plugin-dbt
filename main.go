@@ -10,7 +10,6 @@ import (
 	"github.com/raito-io/cli/base/wrappers"
 
 	"cli-plugin-dbt/internal/constants"
-	"cli-plugin-dbt/internal/resource_provider"
 )
 
 var version = "0.0.0"
@@ -34,7 +33,7 @@ func main() {
 				},
 			},
 		},
-		wrappers.ResourceProviderSync(&resource_provider.ResourceSyncer{}),
+		wrappers.ResourceProviderSyncFactory(InitializeResourceProviderSyncer),
 	)
 
 	if err != nil {
