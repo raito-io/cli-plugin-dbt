@@ -21,9 +21,7 @@ func NewClient(ctx context.Context, config *DbtConfig) *sdk.RaitoClient {
 
 	if config.URLOverride != nil {
 		urlOverride := *config.URLOverride
-		if strings.HasSuffix(urlOverride, "/") {
-			urlOverride = urlOverride[:len(urlOverride)-1]
-		}
+		urlOverride = strings.TrimSuffix(urlOverride, "/")
 
 		clientOptions = append(clientOptions, sdk.WithUrlOverride(urlOverride))
 	}

@@ -1,6 +1,5 @@
 package resource_provider
 
-
 type ResourceStatus int
 
 const (

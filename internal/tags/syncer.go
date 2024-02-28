@@ -68,10 +68,10 @@ func loadTagsFromManifest(manifestData *manifest.Manifest, tagsHandler wrappers.
 			return nil, err
 		}
 
-		for columnName, column := range manifestData.Nodes[i].Columns {
+		for columnName := range manifestData.Nodes[i].Columns {
 			columnFullName := fmt.Sprintf("%s.%s", doName, columnName)
-			columnTags := set.NewSet[string](column.Tags...)
-			columnTags.Add(column.Config.Tags...)
+			columnTags := set.NewSet[string](manifestData.Nodes[i].Columns[columnName].Tags...)
+			columnTags.Add(manifestData.Nodes[i].Columns[columnName].Config.Tags...)
 
 			err = addTags(tagsHandler, columnFullName, source, columnTags)
 			if err != nil {

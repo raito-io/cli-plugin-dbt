@@ -37,7 +37,7 @@ func (m *parser) LoadManifest(path string) (*Manifest, error) {
 		return nil, fmt.Errorf("absoluting path: %w", err)
 	}
 
-	if m.isValid && path == filePath {
+	if m.isValid && m.path == filePath {
 		return &m.manifest, nil
 	}
 
@@ -47,7 +47,7 @@ func (m *parser) LoadManifest(path string) (*Manifest, error) {
 	}
 
 	m.isValid = true
-	path = filePath
+	m.path = filePath
 
 	return &m.manifest, nil
 }
