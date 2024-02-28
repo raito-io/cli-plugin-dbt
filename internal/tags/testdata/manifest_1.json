@@ -2,93 +2,16 @@
   "metadata": {
     "dbt_schema_version": "https://schemas.getdbt.com/dbt/manifest/v11.json",
     "dbt_version": "1.7.6",
-    "generated_at": "2024-02-16T12:56:34.518865Z",
-    "invocation_id": "c3c72df8-1056-4913-acff-ff0aac2520ea",
+    "generated_at": "2024-02-28T11:51:09.650862Z",
+    "invocation_id": "db6a0643-1791-4d66-9c43-d7037ac1b6c9",
     "env": {},
     "project_name": "dbt_bq_demo",
+    "project_id": "2a0d9687e752c06030e0d622e88ec42a",
+    "user_id": "ccec11d4-c0fe-4421-9995-5b2a87de3bb0",
     "send_anonymous_usage_stats": true,
     "adapter_type": "bigquery"
   },
   "nodes": {
-    "seed.dbt_bq_demo.customers": {
-      "database": "bq-demodata",
-      "schema": "dbt_company",
-      "name": "customers",
-      "resource_type": "seed",
-      "package_name": "dbt_bq_demo",
-      "path": "customers.csv",
-      "original_file_path": "seeds/customers.csv",
-      "unique_id": "seed.dbt_bq_demo.customers",
-      "fqn": [
-        "dbt_bq_demo",
-        "customers"
-      ],
-      "alias": "customers",
-      "checksum": {
-        "name": "sha256",
-        "checksum": "88685e0558ecb89f561b8ab66abaac3d2d4e1efda5d0f9d665af409b891b9436"
-      },
-      "config": {
-        "enabled": true,
-        "alias": null,
-        "schema": null,
-        "database": null,
-        "tags": [],
-        "meta": {},
-        "group": null,
-        "materialized": "seed",
-        "incremental_strategy": null,
-        "persist_docs": {},
-        "post-hook": [],
-        "pre-hook": [],
-        "quoting": {},
-        "column_types": {
-          "SubscriptionDate": "DATE",
-          "Index": "INT64"
-        },
-        "full_refresh": null,
-        "unique_key": null,
-        "on_schema_change": "ignore",
-        "on_configuration_change": "apply",
-        "grants": {},
-        "packages": [],
-        "docs": {
-          "show": true,
-          "node_color": null
-        },
-        "contract": {
-          "enforced": false,
-          "alias_types": true
-        },
-        "delimiter": ",",
-        "quote_columns": null
-      },
-      "tags": [],
-      "description": "",
-      "columns": {},
-      "meta": {},
-      "group": null,
-      "docs": {
-        "show": true,
-        "node_color": null
-      },
-      "patch_path": "dbt_bq_demo://seeds/schema.yml",
-      "build_path": "target/run/dbt_bq_demo/seeds/customers.csv",
-      "deferred": false,
-      "unrendered_config": {
-        "column_types": {
-          "SubscriptionDate": "DATE",
-          "Index": "INT64"
-        }
-      },
-      "created_at": 1708004836.4815822,
-      "relation_name": "`bq-demodata`.`dbt_company`.`customers`",
-      "raw_code": "",
-      "root_path": "/Users/rubenmennes/git/testing/dbt/dbt_bq_demo",
-      "depends_on": {
-        "macros": []
-      }
-    },
     "model.dbt_bq_demo.new_customers": {
       "database": "bq-demodata",
       "schema": "dbt_company",
@@ -112,21 +35,24 @@
         "alias": null,
         "schema": null,
         "database": null,
-        "tags": [],
+        "tags": [
+          "raito_tag_1",
+          "raito_tag_2"
+        ],
         "meta": {
           "raito": {
-            "grant": [
-              {
-                "name": "sales_analysis_dbt",
-                "global_permissions": [
-                  "READ"
-                ]
-              }
-            ],
             "filter": [
               {
-                "policy_rule": "Country IN (\"France\", \"Belgium\", \"Germany\")",
-                "name": "country_filter_eu"
+                "name": "country_filter_eu",
+                "policy_rule": "Country IN (\"France\", \"Belgium\", \"Germany\")"
+              }
+            ],
+            "grant": [
+              {
+                "global_permissions": [
+                  "READ"
+                ],
+                "name": "sales_analysis_dbt"
               }
             ]
           }
@@ -155,7 +81,10 @@
         },
         "access": "protected"
       },
-      "tags": [],
+      "tags": [
+        "raito_tag_1",
+        "raito_tag_2"
+      ],
       "description": "catalog description",
       "columns": {
         "Email": {
@@ -172,23 +101,29 @@
           "data_type": null,
           "constraints": [],
           "quote": null,
-          "tags": []
+          "tags": [],
+          "config": {
+            "tags": [
+              "raito_tag_2",
+              "raito_tag_3"
+            ]
+          }
         }
       },
       "meta": {
         "raito": {
-          "grant": [
-            {
-              "name": "sales_analysis_dbt",
-              "global_permissions": [
-                "READ"
-              ]
-            }
-          ],
           "filter": [
             {
-              "policy_rule": "Country IN (\"France\", \"Belgium\", \"Germany\")",
-              "name": "country_filter_eu"
+              "name": "country_filter_eu",
+              "policy_rule": "Country IN (\"France\", \"Belgium\", \"Germany\")"
+            }
+          ],
+          "grant": [
+            {
+              "global_permissions": [
+                "READ"
+              ],
+              "name": "sales_analysis_dbt"
             }
           ]
         }
@@ -202,27 +137,31 @@
       "build_path": "target/run/dbt_bq_demo/models/new_customers.sql",
       "deferred": false,
       "unrendered_config": {
+        "tags": [
+          "raito_tag_1",
+          "raito_tag_2"
+        ],
         "materialized": "table",
         "meta": {
           "raito": {
-            "grant": [
-              {
-                "name": "sales_analysis_dbt",
-                "global_permissions": [
-                  "READ"
-                ]
-              }
-            ],
             "filter": [
               {
-                "policy_rule": "Country IN (\"France\", \"Belgium\", \"Germany\")",
-                "name": "country_filter_eu"
+                "name": "country_filter_eu",
+                "policy_rule": "Country IN (\"France\", \"Belgium\", \"Germany\")"
+              }
+            ],
+            "grant": [
+              {
+                "global_permissions": [
+                  "READ"
+                ],
+                "name": "sales_analysis_dbt"
               }
             ]
           }
         }
       },
-      "created_at": 1708088194.623469,
+      "created_at": 1709120563.0472698,
       "relation_name": "`bq-demodata`.`dbt_company`.`new_customers`",
       "raw_code": "{{ config(materialized='table', meta= {'raito':\n  {'grant': [{'name': 'sales_analysis_dbt', 'global_permissions': ['READ']}],\n  'filter': [{'name': 'country_filter_eu', 'policy_rule': 'Country IN (\"France\", \"Belgium\", \"Germany\")'}]}}) }}\n\nSELECT * FROM {{ ref('customers') }} WHERE SubscriptionDate > '2021-01-01'",
       "language": "sql",
@@ -256,6 +195,92 @@
       "version": null,
       "latest_version": null,
       "deprecation_date": null
+    },
+    "seed.dbt_bq_demo.customers": {
+      "database": "bq-demodata",
+      "schema": "dbt_company",
+      "name": "customers",
+      "resource_type": "seed",
+      "package_name": "dbt_bq_demo",
+      "path": "customers.csv",
+      "original_file_path": "seeds/customers.csv",
+      "unique_id": "seed.dbt_bq_demo.customers",
+      "fqn": [
+        "dbt_bq_demo",
+        "customers"
+      ],
+      "alias": "customers",
+      "checksum": {
+        "name": "sha256",
+        "checksum": "88685e0558ecb89f561b8ab66abaac3d2d4e1efda5d0f9d665af409b891b9436"
+      },
+      "config": {
+        "enabled": true,
+        "alias": null,
+        "schema": null,
+        "database": null,
+        "tags": [
+          "raito_tag_5"
+        ],
+        "meta": {},
+        "group": null,
+        "materialized": "seed",
+        "incremental_strategy": null,
+        "persist_docs": {},
+        "post-hook": [],
+        "pre-hook": [],
+        "quoting": {},
+        "column_types": {
+          "SubscriptionDate": "DATE",
+          "Index": "INT64"
+        },
+        "full_refresh": null,
+        "unique_key": null,
+        "on_schema_change": "ignore",
+        "on_configuration_change": "apply",
+        "grants": {},
+        "packages": [],
+        "docs": {
+          "show": true,
+          "node_color": null
+        },
+        "contract": {
+          "enforced": false,
+          "alias_types": true
+        },
+        "delimiter": ",",
+        "quote_columns": null
+      },
+      "tags": [
+        "raito_tag_5"
+      ],
+      "description": "",
+      "columns": {},
+      "meta": {},
+      "group": null,
+      "docs": {
+        "show": true,
+        "node_color": null
+      },
+      "patch_path": "dbt_bq_demo://seeds/schema.yml",
+      "build_path": "target/run/dbt_bq_demo/seeds/customers.csv",
+      "deferred": false,
+      "unrendered_config": {
+        "tags": [
+          "raito_tag_5"
+        ],
+        "column_types": {
+          "SubscriptionDate": "DATE",
+          "Index": "INT64"
+        }
+      },
+      "created_at": 1709120563.02969,
+      "relation_name": "`bq-demodata`.`dbt_company`.`customers`",
+      "raw_code": "",
+      "root_path": "/Users/rubenmennes/git/testing/dbt/dbt_bq_demo",
+      "depends_on": {
+        "macros": []
+      }
     }
   },
   "sources": {},
@@ -11059,16 +11084,16 @@
   "selectors": {},
   "disabled": {},
   "parent_map": {
-    "seed.dbt_bq_demo.customers": [],
     "model.dbt_bq_demo.new_customers": [
       "seed.dbt_bq_demo.customers"
-    ]
+    ],
+    "seed.dbt_bq_demo.customers": []
   },
   "child_map": {
+    "model.dbt_bq_demo.new_customers": [],
     "seed.dbt_bq_demo.customers": [
       "model.dbt_bq_demo.new_customers"
-    ],
-    "model.dbt_bq_demo.new_customers": []
+    ]
   },
   "group_map": {},
   "saved_queries": {},

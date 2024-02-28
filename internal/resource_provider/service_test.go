@@ -10,18 +10,21 @@ import (
 	"github.com/aws/smithy-go/ptr"
 	"github.com/hashicorp/go-hclog"
 	"github.com/raito-io/bexpression/utils"
+	"github.com/raito-io/cli/base/resource_provider"
 	"github.com/raito-io/golang-set/set"
 	"github.com/raito-io/sdk/services"
 	sdkTypes "github.com/raito-io/sdk/types"
 	"github.com/raito-io/sdk/types/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+
+	"cli-plugin-dbt/internal/manifest"
 )
 
 func TestDbtService_createAndUpdateAccessProviders(t *testing.T) {
 	type fields struct {
 		dataSourceId string
-		setup        func(apClientMock *mockAccessProviderClient)
+		setup        func(apClientMock *MockAccessProviderClient)
 	}
 	type args struct {
 		ctx         context.Context
@@ -50,7 +53,7 @@ func TestDbtService_createAndUpdateAccessProviders(t *testing.T) {
 			name: "create and update grants",
 			fields: fields{
 				dataSourceId: "dsId1",
-				setup: func(apClientMock *mockAccessProviderClient) {
+				setup: func(apClientMock *MockAccessProviderClient) {
 					apClientMock.EXPECT().CreateAccessProvider(mock.Anything, sdkTypes.AccessProviderInput{Name: ptr.String("grantName"), Action: utils.Ptr(models.AccessProviderActionGrant)}).Return(&sdkTypes.AccessProvider{Name: "grantName"}, nil).Once()
 					apClientMock.EXPECT().UpdateAccessProvider(mock.Anything, "grantId2", sdkTypes.AccessProviderInput{Name: ptr.String("grantName2"), Action: utils.Ptr(models.AccessProviderActionGrant)}, mock.Anything).Return(&sdkTypes.AccessProvider{Name: "grantName2"}, nil).Once()
 				},
@@ -81,7 +84,7 @@ func TestDbtService_createAndUpdateAccessProviders(t *testing.T) {
 			name: "create filters",
 			fields: fields{
 				dataSourceId: "dsId1",
-				setup: func(apClientMock *mockAccessProviderClient) {
+				setup: func(apClientMock *MockAccessProviderClient) {
 					apClientMock.EXPECT().CreateAccessProvider(mock.Anything, sdkTypes.AccessProviderInput{Name: ptr.String("filterName1"), Action: utils.Ptr(models.AccessProviderActionFiltered)}).Return(&sdkTypes.AccessProvider{Name: "filterName"}, nil)
 					apClientMock.EXPECT().UpdateAccessProvider(mock.Anything, "filterId2", sdkTypes.AccessProviderInput{Name: ptr.String("filterName2"), Action: utils.Ptr(models.AccessProviderActionFiltered)}, mock.Anything).Return(&sdkTypes.AccessProvider{Name: "filterName2"}, nil)
 				},
@@ -105,7 +108,7 @@ func TestDbtService_createAndUpdateAccessProviders(t *testing.T) {
 			name: "create masks",
 			fields: fields{
 				dataSourceId: "dsId1",
-				setup: func(apClientMock *mockAccessProviderClient) {
+				setup: func(apClientMock *MockAccessProviderClient) {
 					apClientMock.EXPECT().CreateAccessProvider(mock.Anything, sdkTypes.AccessProviderInput{Name: ptr.String("maskName1"), Action: utils.Ptr(models.AccessProviderActionMask)}).Return(&sdkTypes.AccessProvider{Name: "maskName1"}, nil)
 					apClientMock.EXPECT().UpdateAccessProvider(mock.Anything, "maskId2", sdkTypes.AccessProviderInput{Name: ptr.String("maskName2"), Action: utils.Ptr(models.AccessProviderActionMask)}, mock.Anything).Return(&sdkTypes.AccessProvider{Name: "maskName2"}, nil)
 				},
@@ -130,7 +133,7 @@ func TestDbtService_createAndUpdateAccessProviders(t *testing.T) {
 			name: "remove access providers",
 			fields: fields{
 				dataSourceId: "dsId1",
-				setup: func(apClientMock *mockAccessProviderClient) {
+				setup: func(apClientMock *MockAccessProviderClient) {
 					apClientMock.EXPECT().DeleteAccessProvider(mock.Anything, "maskId2", mock.Anything).Return(nil)
 					apClientMock.EXPECT().DeleteAccessProvider(mock.Anything, "filterId2", mock.Anything).Return(nil)
 					apClientMock.EXPECT().DeleteAccessProvider(mock.Anything, "grantId2", mock.Anything).Return(nil)
@@ -152,7 +155,7 @@ func TestDbtService_createAndUpdateAccessProviders(t *testing.T) {
 			name: "successful update",
 			fields: fields{
 				dataSourceId: "dsId1",
-				setup: func(apClientMock *mockAccessProviderClient) {
+				setup: func(apClientMock *MockAccessProviderClient) {
 					apClientMock.EXPECT().CreateAccessProvider(mock.Anything, sdkTypes.AccessProviderInput{Name: ptr.String("grantName"), Action: utils.Ptr(models.AccessProviderActionGrant)}).Return(&sdkTypes.AccessProvider{Name: "grantName"}, nil).Once()
 					apClientMock.EXPECT().UpdateAccessProvider(mock.Anything, "grantId2", sdkTypes.AccessProviderInput{Name: ptr.String("grantName2"), Action: utils.Ptr(models.AccessProviderActionGrant)}, mock.Anything).Return(&sdkTypes.AccessProvider{Name: "grantName2"}, nil).Once()
 					apClientMock.EXPECT().CreateAccessProvider(mock.Anything, sdkTypes.AccessProviderInput{Name: ptr.String("filterName1"), Action: utils.Ptr(models.AccessProviderActionFiltered)}).Return(&sdkTypes.AccessProvider{Name: "filterName"}, nil)
@@ -200,7 +203,7 @@ func TestDbtService_createAndUpdateAccessProviders(t *testing.T) {
 			name: "update with errors",
 			fields: fields{
 				dataSourceId: "dsId1",
-				setup: func(apClientMock *mockAccessProviderClient) {
+				setup: func(apClientMock *MockAccessProviderClient) {
 					apClientMock.EXPECT().CreateAccessProvider(mock.Anything, sdkTypes.AccessProviderInput{Name: ptr.String("grantName"), Action: utils.Ptr(models.AccessProviderActionGrant)}).Return(&sdkTypes.AccessProvider{Name: "grantName"}, nil).Once()
 					apClientMock.EXPECT().UpdateAccessProvider(mock.Anything, "grantId2", sdkTypes.AccessProviderInput{Name: ptr.String("grantName2"), Action: utils.Ptr(models.AccessProviderActionGrant)}, mock.Anything).Return(&sdkTypes.AccessProvider{Name: "grantName2"}, nil).Once()
 					apClientMock.EXPECT().CreateAccessProvider(mock.Anything, sdkTypes.AccessProviderInput{Name: ptr.String("filterName1"), Action: utils.Ptr(models.AccessProviderActionFiltered)}).Return(&sdkTypes.AccessProvider{Name: "filterName"}, nil)
@@ -268,7 +271,7 @@ func TestDbtService_createAndUpdateAccessProviders(t *testing.T) {
 func TestDbtService_loadExistingAps(t *testing.T) {
 	type fields struct {
 		dataSourceId string
-		setup        func(apClientMock *mockAccessProviderClient)
+		setup        func(apClientMock *MockAccessProviderClient)
 	}
 	type args struct {
 		ctx     context.Context
@@ -290,7 +293,7 @@ func TestDbtService_loadExistingAps(t *testing.T) {
 			name: "success",
 			fields: fields{
 				dataSourceId: "datasourceId1",
-				setup: func(apClientMock *mockAccessProviderClient) {
+				setup: func(apClientMock *MockAccessProviderClient) {
 					apClientMock.EXPECT().ListAccessProviders(mock.Anything, mock.Anything).RunAndReturn(func(ctx context.Context, f ...func(*services.AccessProviderListOptions)) <-chan sdkTypes.ListItem[sdkTypes.AccessProvider] {
 						outputChannel := make(chan sdkTypes.ListItem[sdkTypes.AccessProvider], 1)
 						go func() {
@@ -367,7 +370,7 @@ func TestDbtService_loadExistingAps(t *testing.T) {
 			name: "multiple access providers with same name",
 			fields: fields{
 				dataSourceId: "datasourceId1",
-				setup: func(apClientMock *mockAccessProviderClient) {
+				setup: func(apClientMock *MockAccessProviderClient) {
 					apClientMock.EXPECT().ListAccessProviders(mock.Anything, mock.Anything).RunAndReturn(func(ctx context.Context, f ...func(*services.AccessProviderListOptions)) <-chan sdkTypes.ListItem[sdkTypes.AccessProvider] {
 						outputChannel := make(chan sdkTypes.ListItem[sdkTypes.AccessProvider], 1)
 						go func() {
@@ -475,7 +478,7 @@ func TestDbtService_loadExistingAps(t *testing.T) {
 
 func TestDbtService_RunDbt(t *testing.T) {
 	type fields struct {
-		setup        func(client *mockAccessProviderClient)
+		setup        func(client *MockAccessProviderClient)
 		dataSourceId string
 	}
 	type args struct {
@@ -498,7 +501,7 @@ func TestDbtService_RunDbt(t *testing.T) {
 		{
 			name: "manifest file 1",
 			fields: fields{
-				setup: func(client *mockAccessProviderClient) {
+				setup: func(client *MockAccessProviderClient) {
 					client.EXPECT().ListAccessProviders(mock.Anything, mock.Anything).RunAndReturn(func(ctx context.Context, f ...func(*services.AccessProviderListOptions)) <-chan sdkTypes.ListItem[sdkTypes.AccessProvider] {
 						outputChannel := make(chan sdkTypes.ListItem[sdkTypes.AccessProvider])
 
@@ -535,7 +538,7 @@ func TestDbtService_RunDbt(t *testing.T) {
 								Permissions: []*string{},
 								DataObjectByName: []sdkTypes.AccessProviderWhatDoByNameInput{
 									{
-										Fullname:   "bq-demodata.dbt_decathlon.new_customers",
+										Fullname:   "bq-demodata.dbt_company.new_customers",
 										Datasource: "dsId1",
 									},
 								},
@@ -568,7 +571,7 @@ func TestDbtService_RunDbt(t *testing.T) {
 							{
 								DataObjectByName: []sdkTypes.AccessProviderWhatDoByNameInput{
 									{
-										Fullname:   "bq-demodata.dbt_decathlon.new_customers",
+										Fullname:   "bq-demodata.dbt_company.new_customers",
 										Datasource: "dsId1",
 									},
 								},
@@ -601,7 +604,7 @@ func TestDbtService_RunDbt(t *testing.T) {
 							{
 								DataObjectByName: []sdkTypes.AccessProviderWhatDoByNameInput{
 									{
-										Fullname:   "bq-demodata.dbt_decathlon.new_customers.Email",
+										Fullname:   "bq-demodata.dbt_company.new_customers.Email",
 										Datasource: "dsId1",
 									},
 								},
@@ -659,16 +662,14 @@ func TestDbtService_RunDbt(t *testing.T) {
 	}
 }
 
-func createDbtService(t *testing.T, dataSourceId string) (*DbtService, *mockAccessProviderClient) {
+func createDbtService(t *testing.T, dataSourceId string) (*DbtService, *MockAccessProviderClient) {
 	t.Helper()
 
-	apMock := newMockAccessProviderClient(t)
+	apMock := NewMockAccessProviderClient(t)
 	logger := hclog.NewNullLogger()
+	manifestParser := manifest.NewManifestParser()
 
-	return &DbtService{
-		dataSourceId:         dataSourceId,
-		accessProviderClient: apMock,
-		logger:               logger,
-	}, apMock
+	service := NewDbtService(&resource_provider.UpdateResourceInput{DataSourceId: dataSourceId}, apMock, manifestParser, logger)
 
+	return service, apMock
 }
