@@ -3,6 +3,7 @@ project_name: cli-plugin-dbt
 before:
   hooks:
     - go mod tidy
+    - make wire
 builds:
   - env:
       - CGO_ENABLED=0
