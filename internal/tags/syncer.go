@@ -17,19 +17,24 @@ var _ wrappers.TagSyncer = (*TagImportService)(nil)
 
 const TagKey = "tag"
 
+//go:generate go run github.com/vektra/mockery/v2 --name=Parser --with-expecter
+type Parser interface {
+	LoadManifest(path string) (*manifest.Manifest, error)
+}
+
 type TagImportService struct {
-	manifestParser manifest.Parser
+	manifestParser Parser
 	logger         hclog.Logger
 }
 
-func NewTagImportService(manifestParser manifest.Parser, logger hclog.Logger) *TagImportService {
+func NewTagImportService(manifestParser Parser, logger hclog.Logger) *TagImportService {
 	return &TagImportService{
 		manifestParser: manifestParser,
 		logger:         logger,
 	}
 }
 
-func (t TagImportService) SyncTags(ctx context.Context, tagsHandler wrappers.TagHandler, config *tag.TagSyncConfig) ([]string, error) {
+func (t TagImportService) SyncTags(_ context.Context, tagsHandler wrappers.TagHandler, config *tag.TagSyncConfig) ([]string, error) {
 	manifestFile := config.ConfigMap.GetString(constants.ManifestParameterName)
 
 	manifestData, err := t.manifestParser.LoadManifest(manifestFile)
@@ -37,6 +42,10 @@ func (t TagImportService) SyncTags(ctx context.Context, tagsHandler wrappers.Tag
 		return nil, fmt.Errorf("load file %s: %w", manifestFile, err)
 	}
 
+	return loadTagsFromManifest(manifestData, tagsHandler)
+}
+
+func loadTagsFromManifest(manifestData *manifest.Manifest, tagsHandler wrappers.TagHandler) ([]string, error) {
 	supportedResourceTypes := set.NewSet("model", "seed", "snapshot")
 
 	source := fmt.Sprintf("dbt-%s", manifestData.Metadata.ProjectName)
@@ -54,7 +63,7 @@ func (t TagImportService) SyncTags(ctx context.Context, tagsHandler wrappers.Tag
 		doTags := set.NewSet[string](manifestData.Nodes[i].Tags...)
 		doTags.Add(manifestData.Nodes[i].Config.Tags...)
 
-		err = t.addTags(tagsHandler, doName, source, doTags)
+		err := addTags(tagsHandler, doName, source, doTags)
 		if err != nil {
 			return nil, err
 		}
@@ -62,8 +71,9 @@ func (t TagImportService) SyncTags(ctx context.Context, tagsHandler wrappers.Tag
 		for columnName, column := range manifestData.Nodes[i].Columns {
 			columnFullName := fmt.Sprintf("%s.%s", doName, columnName)
 			columnTags := set.NewSet[string](column.Tags...)
+			columnTags.Add(column.Config.Tags...)
 
-			err = t.addTags(tagsHandler, columnFullName, source, columnTags)
+			err = addTags(tagsHandler, columnFullName, source, columnTags)
 			if err != nil {
 				return nil, err
 			}
@@ -73,7 +83,7 @@ func (t TagImportService) SyncTags(ctx context.Context, tagsHandler wrappers.Tag
 	return []string{source}, nil
 }
 
-func (t TagImportService) addTags(tagsHandler wrappers.TagHandler, doFullName string, source string, tags set.Set[string]) error {
+func addTags(tagsHandler wrappers.TagHandler, doFullName string, source string, tags set.Set[string]) error {
 	for tagValue := range tags {
 		err := tagsHandler.AddTags(&tag.TagImportObject{
 			DataObjectFullName: &doFullName,

@@ -50,11 +50,12 @@ type NodeConfig struct {
 }
 
 type Column struct {
-	Name        string   `json:"name"`
-	Description string   `json:"description"`
-	Meta        Meta     `json:"meta"`
-	DataType    *string  `json:"data_type"`
-	Tags        []string `json:"tags"`
+	Name        string     `json:"name"`
+	Description string     `json:"description"`
+	Meta        Meta       `json:"meta"`
+	DataType    *string    `json:"data_type"`
+	Tags        []string   `json:"tags"`
+	Config      NodeConfig `json:"config"`
 }
 
 type NodeDependsOn struct {

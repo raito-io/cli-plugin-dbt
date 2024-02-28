@@ -8,7 +8,7 @@ require (
 	github.com/hashicorp/go-hclog v1.6.2
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/raito-io/bexpression v0.1.1
-	github.com/raito-io/cli v0.61.0-dev.1
+	github.com/raito-io/cli v0.61.0-dev.2
 	github.com/raito-io/enumer v0.1.4
 	github.com/raito-io/golang-set v0.0.4
 	github.com/raito-io/sdk v0.0.5

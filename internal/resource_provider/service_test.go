@@ -538,7 +538,7 @@ func TestDbtService_RunDbt(t *testing.T) {
 								Permissions: []*string{},
 								DataObjectByName: []sdkTypes.AccessProviderWhatDoByNameInput{
 									{
-										Fullname:   "bq-demodata.dbt_decathlon.new_customers",
+										Fullname:   "bq-demodata.dbt_company.new_customers",
 										Datasource: "dsId1",
 									},
 								},
@@ -571,7 +571,7 @@ func TestDbtService_RunDbt(t *testing.T) {
 							{
 								DataObjectByName: []sdkTypes.AccessProviderWhatDoByNameInput{
 									{
-										Fullname:   "bq-demodata.dbt_decathlon.new_customers",
+										Fullname:   "bq-demodata.dbt_company.new_customers",
 										Datasource: "dsId1",
 									},
 								},
@@ -604,7 +604,7 @@ func TestDbtService_RunDbt(t *testing.T) {
 							{
 								DataObjectByName: []sdkTypes.AccessProviderWhatDoByNameInput{
 									{
-										Fullname:   "bq-demodata.dbt_decathlon.new_customers.Email",
+										Fullname:   "bq-demodata.dbt_company.new_customers.Email",
 										Datasource: "dsId1",
 									},
 								},
