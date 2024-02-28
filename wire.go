@@ -40,6 +40,7 @@ func InitializeTagSyncer(ctx context.Context, config *tag.TagSyncConfig) (wrappe
 		utils.GetLogger,
 		manifest.GlobalManifestParser,
 
+		wire.Bind(new(tags.Parser), new(manifest.Parser)),
 		wire.Bind(new(wrappers.TagSyncer), new(*tags.TagImportService)),
 	)
 
