@@ -11,19 +11,20 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/raito-io/bexpression/utils"
+	"github.com/raito-io/cli/base/resource_provider"
 	"github.com/raito-io/golang-set/set"
-	"github.com/raito-io/sdk"
 	"github.com/raito-io/sdk/services"
 	sdkTypes "github.com/raito-io/sdk/types"
 	"github.com/raito-io/sdk/types/models"
 
 	"cli-plugin-dbt/internal/array"
+	"cli-plugin-dbt/internal/manifest"
 	"cli-plugin-dbt/internal/resource_provider/types"
 	"cli-plugin-dbt/internal/workerpool"
 )
 
-//go:generate go run github.com/vektra/mockery/v2 --name=accessProviderClient --with-expecter --inpackage --replace-type github.com/raito-io/sdk/internal/schema=github.com/raito-io/sdk/types
-type accessProviderClient interface {
+//go:generate go run github.com/vektra/mockery/v2 --name=AccessProviderClient --with-expecter --inpackage --replace-type github.com/raito-io/sdk/internal/schema=github.com/raito-io/sdk/types
+type AccessProviderClient interface {
 	CreateAccessProvider(ctx context.Context, ap sdkTypes.AccessProviderInput) (*sdkTypes.AccessProvider, error)
 	UpdateAccessProvider(ctx context.Context, id string, ap sdkTypes.AccessProviderInput, ops ...func(options *services.UpdateAccessProviderOptions)) (*sdkTypes.AccessProvider, error)
 	DeleteAccessProvider(ctx context.Context, id string, ops ...func(options *services.UpdateAccessProviderOptions)) error
@@ -39,7 +40,8 @@ const (
 
 type DbtService struct {
 	dataSourceId         string
-	accessProviderClient accessProviderClient
+	accessProviderClient AccessProviderClient
+	manifestParser       manifest.Parser
 	logger               hclog.Logger
 }
 
