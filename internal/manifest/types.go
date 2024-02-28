@@ -22,19 +22,20 @@ type Node struct {
 	OriginalFilePath string                 `json:"original_file_path"`
 	UniqueId         string                 `json:"unique_id"`
 	Fqn              []string               `json:"fqn"`
-	Alias       string            `json:"alias"`
-	Config      NodeConfig        `json:"config"`
-	Description string            `json:"description"`
-	Columns     map[string]Column `json:"columns"`
-	Meta        Meta              `json:"meta"`
-	PatchPath   string            `json:"patch_path"`
+	Alias            string                 `json:"alias"`
+	Config           NodeConfig             `json:"config"`
+	Tags             []string               `json:"tags"`
+	Description      string                 `json:"description"`
+	Columns          map[string]Column      `json:"columns"`
+	Meta             Meta                   `json:"meta"`
+	PatchPath        string                 `json:"patch_path"`
 	BuildPath        string                 `json:"build_path"`
 	Deferred         bool                   `json:"deferred"`
 	UnrenderedConfig map[string]interface{} `json:"unrendered_config"`
 	RelationName     string                 `json:"relation_name"`
-	Language    string            `json:"language"`
-	DependsOn   NodeDependsOn     `json:"depends_on"`
-	Access      string            `json:"access"`
+	Language         string                 `json:"language"`
+	DependsOn        NodeDependsOn          `json:"depends_on"`
+	Access           string                 `json:"access"`
 }
 
 type NodeConfig struct {
@@ -42,16 +43,18 @@ type NodeConfig struct {
 	Alias        *string                `json:"alias"`
 	Schema       *string                `json:"schema"`
 	Database     *string                `json:"database"`
+	Tags         []string               `json:"tags"`
 	Meta         map[string]interface{} `json:"meta"`
 	Group        *string                `json:"group"`
 	Materialized *string                `json:"materialized"`
 }
 
 type Column struct {
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	Meta        Meta    `json:"meta"`
-	DataType    *string `json:"data_type"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Meta        Meta     `json:"meta"`
+	DataType    *string  `json:"data_type"`
+	Tags        []string `json:"tags"`
 }
 
 type NodeDependsOn struct {
