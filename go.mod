@@ -11,7 +11,7 @@ require (
 	github.com/raito-io/cli v0.61.0-dev.2
 	github.com/raito-io/enumer v0.1.4
 	github.com/raito-io/golang-set v0.0.4
-	github.com/raito-io/sdk v0.0.5
+	github.com/raito-io/sdk-go v0.0.6
 	github.com/stretchr/testify v1.8.4
 	github.com/vektra/mockery/v2 v2.42.0
 )
@@ -19,9 +19,6 @@ require (
 require (
 	github.com/Khan/genqlient v0.6.0 // indirect
 	github.com/Masterminds/semver/v3 v3.2.1 // indirect
-	github.com/agnivade/levenshtein v1.1.1 // indirect
-	github.com/alexflint/go-arg v1.4.3 // indirect
-	github.com/alexflint/go-scalar v1.2.0 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.25.2 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.27.4 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.4 // indirect

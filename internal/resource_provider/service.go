@@ -13,9 +13,9 @@ import (
 	"github.com/raito-io/bexpression/utils"
 	"github.com/raito-io/cli/base/resource_provider"
 	"github.com/raito-io/golang-set/set"
-	"github.com/raito-io/sdk/services"
-	sdkTypes "github.com/raito-io/sdk/types"
-	"github.com/raito-io/sdk/types/models"
+	"github.com/raito-io/sdk-go/services"
+	sdkTypes "github.com/raito-io/sdk-go/types"
+	"github.com/raito-io/sdk-go/types/models"
 
 	"cli-plugin-dbt/internal/array"
 	"cli-plugin-dbt/internal/manifest"
@@ -23,7 +23,7 @@ import (
 	"cli-plugin-dbt/internal/workerpool"
 )
 
-//go:generate go run github.com/vektra/mockery/v2 --name=AccessProviderClient --with-expecter --inpackage --replace-type github.com/raito-io/sdk/internal/schema=github.com/raito-io/sdk/types
+//go:generate go run github.com/vektra/mockery/v2 --name=AccessProviderClient --with-expecter --inpackage --replace-type github.com/raito-io/sdk-go/internal/schema=github.com/raito-io/sdk-go/types
 type AccessProviderClient interface {
 	CreateAccessProvider(ctx context.Context, ap sdkTypes.AccessProviderInput) (*sdkTypes.AccessProvider, error)
 	UpdateAccessProvider(ctx context.Context, id string, ap sdkTypes.AccessProviderInput, ops ...func(options *services.UpdateAccessProviderOptions)) (*sdkTypes.AccessProvider, error)
@@ -60,12 +60,12 @@ func (s *DbtService) RunDbt(ctx context.Context, dbtFile string) (uint32, uint32
 		return 0, 0, 0, 0, fmt.Errorf("load file %s: %w", dbtFile, err)
 	}
 
-	grants, filters, masks, err := s.loadAccessProvidersFromManifest(manifest)
+	source, grants, filters, masks, err := s.loadAccessProvidersFromManifest(manifest)
 	if err != nil {
 		return 0, 0, 0, 0, fmt.Errorf("load access providers from manifest: %w", err)
 	}
 
-	grantIds, filterIds, maskIds, apsToRemove, err := s.loadExistingAps(ctx, grants, filters, masks)
+	grantIds, filterIds, maskIds, apsToRemove, err := s.loadExistingAps(ctx, source, grants, filters, masks)
 	if err != nil {
 		return 0, 0, 0, 0, err
 	}
@@ -201,12 +201,12 @@ func (s *DbtService) createAndUpdateAccessProviders(ctx context.Context, grants 
 	return addedResource, updatedResource, deletedResources, failures, nil
 }
 
-func (s *DbtService) loadExistingAps(ctx context.Context, grants map[string]*sdkTypes.AccessProviderInput, filters map[string]*sdkTypes.AccessProviderInput, masks map[string]*sdkTypes.AccessProviderInput) (map[string]string, map[string]string, map[string]string, set.Set[string], error) {
+func (s *DbtService) loadExistingAps(ctx context.Context, source string, grants map[string]*sdkTypes.AccessProviderInput, filters map[string]*sdkTypes.AccessProviderInput, masks map[string]*sdkTypes.AccessProviderInput) (map[string]string, map[string]string, map[string]string, set.Set[string], error) {
 	cancelCtx, cancelFn := context.WithCancel(ctx)
 	defer cancelFn()
 
 	existingAps := s.accessProviderClient.ListAccessProviders(cancelCtx, services.WithAccessProviderListFilter(&sdkTypes.AccessProviderFilterInput{
-		Source: utils.Ptr(dbtSource),
+		Source: utils.Ptr(source),
 	}))
 
 	grantIds := make(map[string]string)
@@ -275,7 +275,7 @@ func (s *DbtService) loadDbtFile(dbtFilePath string) (*types.Manifest, error) {
 	return &result, nil
 }
 
-func (s *DbtService) loadAccessProvidersFromManifest(manifest *types.Manifest) (map[string]*sdkTypes.AccessProviderInput, map[string]*sdkTypes.AccessProviderInput, map[string]*sdkTypes.AccessProviderInput, error) {
+func (s *DbtService) loadAccessProvidersFromManifest(manifest *types.Manifest) (string, map[string]*sdkTypes.AccessProviderInput, map[string]*sdkTypes.AccessProviderInput, map[string]*sdkTypes.AccessProviderInput, error) {
 	source := _source(manifest.Metadata.ProjectName)
 
 	grants := make(map[string]*sdkTypes.AccessProviderInput)
@@ -417,10 +417,10 @@ func (s *DbtService) loadAccessProvidersFromManifest(manifest *types.Manifest) (
 	}
 
 	if err != nil {
-		return nil, nil, nil, err
+		return source, nil, nil, nil, err
 	}
 
-	return grants, filters, masks, nil
+	return source, grants, filters, masks, nil
 }
 
 func _source(projectName string) string {

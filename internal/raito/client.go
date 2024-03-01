@@ -4,8 +4,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/raito-io/sdk"
-	"github.com/raito-io/sdk/services"
+	"github.com/raito-io/sdk-go"
+	"github.com/raito-io/sdk-go/services"
 )
 
 type DbtConfig struct {
