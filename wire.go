@@ -10,7 +10,7 @@ import (
 	resource_provider2 "github.com/raito-io/cli/base/resource_provider"
 	"github.com/raito-io/cli/base/tag"
 	"github.com/raito-io/cli/base/wrappers"
-	"github.com/raito-io/sdk/services"
+	"github.com/raito-io/sdk-go/services"
 
 	"cli-plugin-dbt/internal/manifest"
 	"cli-plugin-dbt/internal/raito"

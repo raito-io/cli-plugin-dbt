@@ -12,9 +12,9 @@ import (
 	"github.com/raito-io/bexpression/utils"
 	"github.com/raito-io/cli/base/resource_provider"
 	"github.com/raito-io/golang-set/set"
-	"github.com/raito-io/sdk/services"
-	sdkTypes "github.com/raito-io/sdk/types"
-	"github.com/raito-io/sdk/types/models"
+	"github.com/raito-io/sdk-go/services"
+	sdkTypes "github.com/raito-io/sdk-go/types"
+	"github.com/raito-io/sdk-go/types/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
@@ -455,7 +455,7 @@ func TestDbtService_loadExistingAps(t *testing.T) {
 			s, apClientMock := createDbtService(t, tt.fields.dataSourceId)
 			tt.fields.setup(apClientMock)
 
-			got, got1, got2, got3, err := s.loadExistingAps(tt.args.ctx, tt.args.grants, tt.args.filters, tt.args.masks)
+			got, got1, got2, got3, err := s.loadExistingAps(tt.args.ctx, "dpt-project", tt.args.grants, tt.args.filters, tt.args.masks)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("loadExistingAps() error = %v, wantErr %v", err, tt.wantErr)
 				return
