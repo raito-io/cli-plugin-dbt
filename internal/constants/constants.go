@@ -1,5 +1,6 @@
 package constants
 
 const (
-	ManifestParameterName = "manifest"
+	ManifestParameterName       = "manifest"
+	FullNamePrefixParameterName = "do_prefix"
 )

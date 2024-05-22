@@ -11,6 +11,7 @@ import (
 
 	"cli-plugin-dbt/internal/constants"
 	"cli-plugin-dbt/internal/manifest"
+	"cli-plugin-dbt/internal/utils"
 )
 
 var _ wrappers.TagSyncer = (*TagImportService)(nil)
@@ -42,10 +43,12 @@ func (t TagImportService) SyncTags(_ context.Context, tagsHandler wrappers.TagHa
 		return nil, fmt.Errorf("load file %s: %w", manifestFile, err)
 	}
 
-	return loadTagsFromManifest(manifestData, tagsHandler)
+	prefix := utils.GetFullnamePrefix(config.ConfigMap)
+
+	return loadTagsFromManifest(manifestData, prefix, tagsHandler)
 }
 
-func loadTagsFromManifest(manifestData *manifest.Manifest, tagsHandler wrappers.TagHandler) ([]string, error) {
+func loadTagsFromManifest(manifestData *manifest.Manifest, fullnamePrefix string, tagsHandler wrappers.TagHandler) ([]string, error) {
 	supportedResourceTypes := set.NewSet("model", "seed", "snapshot")
 
 	source := fmt.Sprintf("dbt-%s", manifestData.Metadata.ProjectName)
@@ -58,7 +61,7 @@ func loadTagsFromManifest(manifestData *manifest.Manifest, tagsHandler wrappers.
 		databaseName := manifestData.Nodes[i].Database
 		schemaName := manifestData.Nodes[i].Schema
 		modelName := manifestData.Nodes[i].Name
-		doName := fmt.Sprintf("%s.%s.%s", databaseName, schemaName, modelName)
+		doName := fmt.Sprintf("%s%s.%s.%s", fullnamePrefix, databaseName, schemaName, modelName)
 
 		doTags := set.NewSet[string](manifestData.Nodes[i].Tags...)
 		doTags.Add(manifestData.Nodes[i].Config.Tags...)

@@ -54,13 +54,13 @@ func NewDbtService(config *resource_provider.UpdateResourceInput, accessProvider
 	}
 }
 
-func (s *DbtService) RunDbt(ctx context.Context, dbtFile string) (uint32, uint32, uint32, uint32, error) {
+func (s *DbtService) RunDbt(ctx context.Context, dbtFile string, fullnamePrefix string) (uint32, uint32, uint32, uint32, error) {
 	manifest, err := s.loadDbtFile(dbtFile)
 	if err != nil {
 		return 0, 0, 0, 0, fmt.Errorf("load file %s: %w", dbtFile, err)
 	}
 
-	source, grants, filters, masks, err := s.loadAccessProvidersFromManifest(manifest)
+	source, grants, filters, masks, err := s.loadAccessProvidersFromManifest(manifest, fullnamePrefix)
 	if err != nil {
 		return 0, 0, 0, 0, fmt.Errorf("load access providers from manifest: %w", err)
 	}
@@ -275,7 +275,7 @@ func (s *DbtService) loadDbtFile(dbtFilePath string) (*types.Manifest, error) {
 	return &result, nil
 }
 
-func (s *DbtService) loadAccessProvidersFromManifest(manifest *types.Manifest) (string, map[string]*sdkTypes.AccessProviderInput, map[string]*sdkTypes.AccessProviderInput, map[string]*sdkTypes.AccessProviderInput, error) {
+func (s *DbtService) loadAccessProvidersFromManifest(manifest *types.Manifest, fullnamePrefix string) (string, map[string]*sdkTypes.AccessProviderInput, map[string]*sdkTypes.AccessProviderInput, map[string]*sdkTypes.AccessProviderInput, error) {
 	source := _source(manifest.Metadata.ProjectName)
 
 	grants := make(map[string]*sdkTypes.AccessProviderInput)
@@ -309,7 +309,7 @@ func (s *DbtService) loadAccessProvidersFromManifest(manifest *types.Manifest) (
 		databaseName := manifest.Nodes[i].Database
 		schemaName := manifest.Nodes[i].Schema
 		modelName := manifest.Nodes[i].Name
-		doName := fmt.Sprintf("%s.%s.%s", databaseName, schemaName, modelName)
+		doName := fmt.Sprintf("%s%s.%s.%s", fullnamePrefix, databaseName, schemaName, modelName)
 
 		for grandIdx, grant := range manifest.Nodes[i].Meta.Raito.Grant {
 			if _, found := grants[grant.Name]; !found {

@@ -8,6 +8,7 @@ import (
 	"github.com/raito-io/cli/base/wrappers"
 
 	"cli-plugin-dbt/internal/constants"
+	"cli-plugin-dbt/internal/utils"
 )
 
 var _ wrappers.ResourceProviderSyncer = (*ResourceSyncer)(nil)
@@ -23,7 +24,7 @@ func NewResourceSyncer(service *DbtService) *ResourceSyncer {
 }
 
 func (r ResourceSyncer) UpdateResources(ctx context.Context, config *resource_provider.UpdateResourceInput) (*resource_provider.UpdateResourceResult, error) {
-	addedResources, updatedResource, deletedResources, failures, err := r.service.RunDbt(ctx, config.ConfigMap.GetString(constants.ManifestParameterName))
+	addedResources, updatedResource, deletedResources, failures, err := r.service.RunDbt(ctx, config.ConfigMap.GetString(constants.ManifestParameterName), utils.GetFullnamePrefix(config.ConfigMap))
 	if err != nil {
 		return nil, fmt.Errorf("running dbt: %w", err)
 	}
