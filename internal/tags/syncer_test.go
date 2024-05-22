@@ -195,43 +195,43 @@ func Test_loadTagsFromManifest(t *testing.T) {
 			wantSources: []string{"dbt-project-name-2"},
 			wantTags: []tag.TagImportObject{
 				{
-					DataObjectFullName: utils.Ptr("db.schema.model1"),
+					DataObjectFullName: utils.Ptr("prefix.db.schema.model1"),
 					Key:                "tag",
 					StringValue:        "tag1",
 					Source:             "dbt-project-name-2",
 				},
 				{
-					DataObjectFullName: utils.Ptr("db.schema.model1"),
+					DataObjectFullName: utils.Ptr("prefix.db.schema.model1"),
 					Key:                "tag",
 					StringValue:        "tag2",
 					Source:             "dbt-project-name-2",
 				},
 				{
-					DataObjectFullName: utils.Ptr("db.schema.model2"),
+					DataObjectFullName: utils.Ptr("prefix.db.schema.model2"),
 					Key:                "tag",
 					StringValue:        "tag2",
 					Source:             "dbt-project-name-2",
 				},
 				{
-					DataObjectFullName: utils.Ptr("db.schema.model2"),
+					DataObjectFullName: utils.Ptr("prefix.db.schema.model2"),
 					Key:                "tag",
 					StringValue:        "tag3",
 					Source:             "dbt-project-name-2",
 				},
 				{
-					DataObjectFullName: utils.Ptr("db.schema.model2"),
+					DataObjectFullName: utils.Ptr("prefix.db.schema.model2"),
 					Key:                "tag",
 					StringValue:        "tag5",
 					Source:             "dbt-project-name-2",
 				},
 				{
-					DataObjectFullName: utils.Ptr("db.schema.model2.column1"),
+					DataObjectFullName: utils.Ptr("prefix.db.schema.model2.column1"),
 					Key:                "tag",
 					StringValue:        "tag3",
 					Source:             "dbt-project-name-2",
 				},
 				{
-					DataObjectFullName: utils.Ptr("db.schema.model2.column1"),
+					DataObjectFullName: utils.Ptr("prefix.db.schema.model2.column1"),
 					Key:                "tag",
 					StringValue:        "tag4",
 					Source:             "dbt-project-name-2",
@@ -244,7 +244,7 @@ func Test_loadTagsFromManifest(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tagHandler := mocks.NewSimpleTagHandler(t, 1)
 
-			got, err := loadTagsFromManifest(tt.args.manifestData, tagHandler)
+			got, err := loadTagsFromManifest(tt.args.manifestData, "prefix.", tagHandler)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("loadTagsFromManifest() error = %v, wantErr %v", err, tt.wantErr)
 				return

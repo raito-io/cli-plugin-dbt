@@ -538,7 +538,7 @@ func TestDbtService_RunDbt(t *testing.T) {
 								Permissions: []*string{},
 								DataObjectByName: []sdkTypes.AccessProviderWhatDoByNameInput{
 									{
-										Fullname:   "bq-demodata.dbt_company.new_customers",
+										Fullname:   "prefix.bq-demodata.dbt_company.new_customers",
 										Datasource: "dsId1",
 									},
 								},
@@ -571,7 +571,7 @@ func TestDbtService_RunDbt(t *testing.T) {
 							{
 								DataObjectByName: []sdkTypes.AccessProviderWhatDoByNameInput{
 									{
-										Fullname:   "bq-demodata.dbt_company.new_customers",
+										Fullname:   "prefix.bq-demodata.dbt_company.new_customers",
 										Datasource: "dsId1",
 									},
 								},
@@ -604,7 +604,7 @@ func TestDbtService_RunDbt(t *testing.T) {
 							{
 								DataObjectByName: []sdkTypes.AccessProviderWhatDoByNameInput{
 									{
-										Fullname:   "bq-demodata.dbt_company.new_customers.Email",
+										Fullname:   "prefix.bq-demodata.dbt_company.new_customers.Email",
 										Datasource: "dsId1",
 									},
 								},
@@ -650,7 +650,7 @@ func TestDbtService_RunDbt(t *testing.T) {
 
 			tt.fields.setup(accessProviderClientMock)
 
-			added, updated, removed, failures, err := s.RunDbt(tt.args.ctx, tt.args.dbtFile)
+			added, updated, removed, failures, err := s.RunDbt(tt.args.ctx, tt.args.dbtFile, "prefix.")
 			if !tt.wantErr(t, err, fmt.Sprintf("RunDbt(%v, %v)", tt.args.ctx, tt.args.dbtFile)) {
 				return
 			}
