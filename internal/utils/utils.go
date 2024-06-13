@@ -18,8 +18,8 @@ func GetLogger() hclog.Logger {
 	return logger
 }
 
-func GetFullnamePrefix(config *config.ConfigMap) string {
-	prefix := config.GetString(constants.FullNamePrefixParameterName)
+func GetFullnamePrefix(cfg *config.ConfigMap) string {
+	prefix := cfg.GetString(constants.FullNamePrefixParameterName)
 
 	if prefix == "" {
 		return ""

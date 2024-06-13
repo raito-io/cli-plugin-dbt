@@ -2,6 +2,7 @@ package raito
 
 import (
 	"context"
+	"fmt"
 
 	sdkTypes "github.com/raito-io/sdk-go/types"
 )
@@ -33,13 +34,19 @@ func (r *IdentityRepository) GetUserByEmail(ctx context.Context, email string) (
 
 	user, err := r.userClient.GetUserByEmail(ctx, email)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("user by email call: %w", err)
 	}
 
 	r.usersByEmail[email] = user
+
 	return user, nil
 }
 
 func (r *IdentityRepository) GetCurrentUser(ctx context.Context) (*sdkTypes.User, error) {
-	return r.userClient.GetCurrentUser(ctx)
+	user, err := r.userClient.GetCurrentUser(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("current user call: %w", err)
+	}
+
+	return user, nil
 }
