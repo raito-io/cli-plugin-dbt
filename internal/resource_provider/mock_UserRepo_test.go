@@ -22,64 +22,6 @@ func (_m *MockUserRepo) EXPECT() *MockUserRepo_Expecter {
 	return &MockUserRepo_Expecter{mock: &_m.Mock}
 }
 
-// GetCurrentUser provides a mock function with given fields: ctx
-func (_m *MockUserRepo) GetCurrentUser(ctx context.Context) (*schema.User, error) {
-	ret := _m.Called(ctx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetCurrentUser")
-	}
-
-	var r0 *schema.User
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) (*schema.User, error)); ok {
-		return rf(ctx)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context) *schema.User); ok {
-		r0 = rf(ctx)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*schema.User)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockUserRepo_GetCurrentUser_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetCurrentUser'
-type MockUserRepo_GetCurrentUser_Call struct {
-	*mock.Call
-}
-
-// GetCurrentUser is a helper method to define mock.On call
-//   - ctx context.Context
-func (_e *MockUserRepo_Expecter) GetCurrentUser(ctx interface{}) *MockUserRepo_GetCurrentUser_Call {
-	return &MockUserRepo_GetCurrentUser_Call{Call: _e.mock.On("GetCurrentUser", ctx)}
-}
-
-func (_c *MockUserRepo_GetCurrentUser_Call) Run(run func(ctx context.Context)) *MockUserRepo_GetCurrentUser_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context))
-	})
-	return _c
-}
-
-func (_c *MockUserRepo_GetCurrentUser_Call) Return(_a0 *schema.User, _a1 error) *MockUserRepo_GetCurrentUser_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockUserRepo_GetCurrentUser_Call) RunAndReturn(run func(context.Context) (*schema.User, error)) *MockUserRepo_GetCurrentUser_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // GetUserByEmail provides a mock function with given fields: ctx, email
 func (_m *MockUserRepo) GetUserByEmail(ctx context.Context, email string) (*schema.User, error) {
 	ret := _m.Called(ctx, email)

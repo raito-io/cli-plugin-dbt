@@ -22,14 +22,6 @@ import (
 )
 
 func TestDbtService_createAndUpdateAccessProviders(t *testing.T) {
-	currentUser := sdkTypes.User{
-		Id:          "CurrentUserId",
-		Name:        "CurrentUser",
-		Email:       ptr.String("currentUser@raito.io"),
-		IsRaitoUser: true,
-		Type:        "machine",
-	}
-
 	type fields struct {
 		dataSourceId string
 		setup        func(apClientMock *MockAccessProviderClient, roleMock *MockRoleClient, userMock *MockUserRepo)
@@ -66,7 +58,6 @@ func TestDbtService_createAndUpdateAccessProviders(t *testing.T) {
 					apClientMock.EXPECT().UpdateAccessProvider(mock.Anything, "grantId2", sdkTypes.AccessProviderInput{Name: ptr.String("grantName2"), Action: utils.Ptr(models.AccessProviderActionGrant)}, mock.Anything).Return(&sdkTypes.AccessProvider{Name: "grantName2"}, nil).Once()
 
 					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "generatedGrantId1", ownerRoleId, "owner1").Return(nil, nil)
-					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "grantId2", ownerRoleId, currentUser.Id).Return(nil, nil)
 				},
 			},
 			args: args{
@@ -106,7 +97,6 @@ func TestDbtService_createAndUpdateAccessProviders(t *testing.T) {
 					apClientMock.EXPECT().UpdateAccessProvider(mock.Anything, "filterId2", sdkTypes.AccessProviderInput{Name: ptr.String("filterName2"), Action: utils.Ptr(models.AccessProviderActionFiltered)}, mock.Anything).Return(&sdkTypes.AccessProvider{Name: "filterName2"}, nil)
 
 					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "filterId1", ownerRoleId, "owner1").Return(nil, nil)
-					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "filterId2", ownerRoleId, currentUser.Id).Return(nil, nil)
 				},
 			},
 			args: args{
@@ -188,12 +178,9 @@ func TestDbtService_createAndUpdateAccessProviders(t *testing.T) {
 					apClientMock.EXPECT().DeleteAccessProvider(mock.Anything, "filterId3", mock.Anything).Return(nil)
 					apClientMock.EXPECT().DeleteAccessProvider(mock.Anything, "grantId3", mock.Anything).Return(nil)
 
-					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "maskId2", ownerRoleId, currentUser.Id).Return(nil, nil)
 					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "grantId1", ownerRoleId, "Owner1").Return(nil, nil)
 					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "filterId1", ownerRoleId, "Owner1").Return(nil, nil)
 					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "maskId1", ownerRoleId, "Owner1").Return(nil, nil)
-					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "filterId2", ownerRoleId, currentUser.Id).Return(nil, nil)
-					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "grantId2", ownerRoleId, currentUser.Id).Return(nil, nil)
 				},
 			},
 			args: args{
@@ -261,11 +248,9 @@ func TestDbtService_createAndUpdateAccessProviders(t *testing.T) {
 					apClientMock.EXPECT().DeleteAccessProvider(mock.Anything, "filterId3", mock.Anything).Return(errors.New("some error")).Once()
 					apClientMock.EXPECT().DeleteAccessProvider(mock.Anything, "grantId3", mock.Anything).Return(nil)
 
-					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "maskId2", ownerRoleId, currentUser.Id).Return(nil, nil)
 					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "grantId1", ownerRoleId, "Owner1").Return(nil, nil)
 					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "filterId1", ownerRoleId, "Owner1").Return(nil, nil)
 					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "maskId1", ownerRoleId, "Owner1").Return(nil, nil)
-					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "grantId2", ownerRoleId, currentUser.Id).Return(nil, nil)
 				},
 			},
 			args: args{
@@ -319,7 +304,7 @@ func TestDbtService_createAndUpdateAccessProviders(t *testing.T) {
 			s, apMock, roleMock, userMock := createDbtService(t, tt.fields.dataSourceId)
 			tt.fields.setup(apMock, roleMock, userMock)
 
-			added, updated, removed, failures, err := s.createAndUpdateAccessProviders(tt.args.ctx, &currentUser, tt.args.grants, tt.args.grantIds, tt.args.masks, tt.args.maskIds, tt.args.filters, tt.args.filterIds, tt.args.apsToRemove)
+			added, updated, removed, failures, err := s.createAndUpdateAccessProviders(tt.args.ctx, tt.args.grants, tt.args.grantIds, tt.args.masks, tt.args.maskIds, tt.args.filters, tt.args.filterIds, tt.args.apsToRemove)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("createAndUpdateAccessProviders() error = %v, wantErr %v", err, tt.wantErr)
@@ -583,11 +568,6 @@ func TestDbtService_RunDbt(t *testing.T) {
 			name: "manifest file 1",
 			fields: fields{
 				setup: func(client *MockAccessProviderClient, roleMock *MockRoleClient, userMock *MockUserRepo) {
-					userMock.EXPECT().GetCurrentUser(mock.Anything).Return(&sdkTypes.User{
-						Id:   "CurrentUserId",
-						Name: "CurrentUser",
-					}, nil).Once()
-
 					userMock.EXPECT().GetUserByEmail(mock.Anything, "user1@raito.io").Return(&sdkTypes.User{
 						Id:   "user1Id",
 						Name: "User1",
@@ -655,6 +635,12 @@ func TestDbtService_RunDbt(t *testing.T) {
 							},
 							{
 								LockKey: sdkTypes.AccessProviderLockNamelock,
+								Details: &sdkTypes.AccessProviderLockDetailsInput{
+									Reason: utils.Ptr(lockReason),
+								},
+							},
+							{
+								LockKey: sdkTypes.AccessProviderLockOwnerlock,
 								Details: &sdkTypes.AccessProviderLockDetailsInput{
 									Reason: utils.Ptr(lockReason),
 								},
