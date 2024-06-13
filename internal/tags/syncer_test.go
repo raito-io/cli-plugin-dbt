@@ -16,6 +16,8 @@ import (
 )
 
 func TestTagImportService_SyncTags(t *testing.T) {
+	separator := DefaultTagSeparator{}
+
 	type args struct {
 		config *tag.TagSyncConfig
 	}
@@ -79,7 +81,7 @@ func TestTagImportService_SyncTags(t *testing.T) {
 			logger := hclog.NewNullLogger()
 			tagsHandler := mocks.NewSimpleTagHandler(t, 1)
 
-			tagSyncer := NewTagImportService(manifestParser, logger)
+			tagSyncer := NewTagImportService(manifestParser, logger, separator)
 
 			gotSources, err := tagSyncer.SyncTags(context.Background(), tagsHandler, tt.args.config)
 
@@ -242,9 +244,14 @@ func Test_loadTagsFromManifest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			manifestParser := manifest.NewManifestParser()
+			logger := hclog.NewNullLogger()
+			separator := DefaultTagSeparator{}
+			tagSyncer := NewTagImportService(manifestParser, logger, separator)
+
 			tagHandler := mocks.NewSimpleTagHandler(t, 1)
 
-			got, err := loadTagsFromManifest(tt.args.manifestData, "prefix.", tagHandler)
+			got, err := tagSyncer.loadTagsFromManifest(tt.args.manifestData, "prefix.", tagHandler)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("loadTagsFromManifest() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -253,6 +260,141 @@ func Test_loadTagsFromManifest(t *testing.T) {
 			assert.ElementsMatchf(t, got, tt.wantSources, "loadTagsFromManifest() return sources %v, want %v", got, tt.wantSources)
 
 			assert.ElementsMatchf(t, tagHandler.Tags, tt.wantTags, "loadTagsFromManifest() created tags %v, want %v", tagHandler.Tags, tt)
+		})
+	}
+}
+
+func TestDefaultTagSeparator_Parse(t *testing.T) {
+	type args struct {
+		tag string
+	}
+	tests := []struct {
+		name  string
+		args  args
+		want  string
+		want1 string
+	}{
+		{
+			name: "TagValue1",
+			args: args{
+				tag: "TagValue1",
+			},
+			want:  TagKey,
+			want1: "TagValue1",
+		},
+		{
+			name: "TagKey:TagValue2",
+			args: args{
+				tag: "TagKey:TagValue2",
+			},
+			want:  TagKey,
+			want1: "TagKey:TagValue2",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := DefaultTagSeparator{}
+			got, got1 := d.Parse(tt.args.tag)
+			assert.Equalf(t, tt.want, got, "Parse(%v)", tt.args.tag)
+			assert.Equalf(t, tt.want1, got1, "Parse(%v)", tt.args.tag)
+		})
+	}
+}
+
+func TestDefinedTagSeparator_Parse(t *testing.T) {
+	type fields struct {
+		separatorKey string
+	}
+	type args struct {
+		tag string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   string
+		want1  string
+	}{
+		{
+			name: "CorrectSeparation",
+			fields: fields{
+				separatorKey: ":",
+			},
+			args: args{
+				tag: "TagKey:TagValue",
+			},
+			want:  "TagKey",
+			want1: "TagValue",
+		},
+		{
+			name: "Fallback",
+			fields: fields{
+				separatorKey: ":",
+			},
+			args: args{
+				tag: "TagWithoutSeparator",
+			},
+			want:  TagKey,
+			want1: "TagWithoutSeparator",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			d := DefinedTagSeparator{
+				separatorKey: tt.fields.separatorKey,
+			}
+			got, got1 := d.Parse(tt.args.tag)
+			assert.Equalf(t, tt.want, got, "Parse(%v)", tt.args.tag)
+			assert.Equalf(t, tt.want1, got1, "Parse(%v)", tt.args.tag)
+		})
+	}
+}
+
+func TestNewTagSeparator(t *testing.T) {
+	type args struct {
+		cfg *tag.TagSyncConfig
+	}
+	tests := []struct {
+		name  string
+		args  args
+		input string
+		want  string
+		want1 string
+	}{
+		{
+			name: "SeparatorDefined",
+			args: args{
+				cfg: &tag.TagSyncConfig{
+					ConfigMap: &config.ConfigMap{
+						Parameters: map[string]string{
+							constants.TagSplitKey: ":",
+						},
+					},
+				},
+			},
+			input: "TagKey:TagValue",
+			want:  "TagKey",
+			want1: "TagValue",
+		},
+		{
+			name: "NoSeparatorDefined",
+			args: args{
+				cfg: &tag.TagSyncConfig{
+					ConfigMap: &config.ConfigMap{
+						Parameters: map[string]string{},
+					},
+				},
+			},
+			input: "TagKey:TagValue",
+			want:  TagKey,
+			want1: "TagKey:TagValue",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			key, value := NewTagSeparator(tt.args.cfg).Parse(tt.input)
+			assert.Equalf(t, tt.want, key, "NewTagSeparator(%v).Parse(%s).Key", tt.args.cfg, tt.input)
+			assert.Equalf(t, tt.want1, value, "NewTagSeparator(%v).Parse(%s).Value", tt.args.cfg, tt.input)
 		})
 	}
 }

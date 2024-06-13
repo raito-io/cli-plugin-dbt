@@ -7,4 +7,5 @@ import "github.com/google/wire"
 
 var Wired = wire.NewSet(
 	NewTagImportService,
+	NewTagSeparator,
 )
