@@ -12,11 +12,11 @@ import (
 	"github.com/raito-io/cli/base/wrappers"
 	"github.com/raito-io/sdk-go/services"
 
-	"cli-plugin-dbt/internal/manifest"
-	"cli-plugin-dbt/internal/raito"
-	"cli-plugin-dbt/internal/resource_provider"
-	"cli-plugin-dbt/internal/tags"
-	"cli-plugin-dbt/internal/utils"
+	"github.com/raito-io/cli-plugin-dbt/internal/manifest"
+	"github.com/raito-io/cli-plugin-dbt/internal/raito"
+	"github.com/raito-io/cli-plugin-dbt/internal/resource_provider"
+	"github.com/raito-io/cli-plugin-dbt/internal/tags"
+	"github.com/raito-io/cli-plugin-dbt/internal/utils"
 )
 
 func InitializeResourceProviderSyncer(ctx context.Context, config *resource_provider2.UpdateResourceInput) (wrappers.ResourceProviderSyncer, func(), error) {
@@ -28,6 +28,8 @@ func InitializeResourceProviderSyncer(ctx context.Context, config *resource_prov
 		utils.GetLogger,
 
 		wire.Bind(new(resource_provider.AccessProviderClient), new(*services.AccessProviderClient)),
+		wire.Bind(new(resource_provider.UserRepo), new(*raito.IdentityRepository)),
+		wire.Bind(new(resource_provider.RoleClient), new(*services.RoleClient)),
 		wire.Bind(new(wrappers.ResourceProviderSyncer), new(*resource_provider.ResourceSyncer)),
 	)
 

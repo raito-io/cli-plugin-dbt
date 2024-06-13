@@ -73,14 +73,17 @@ type Grant struct {
 	Name              string   `json:"name"`
 	Permissions       []string `json:"permissions"`
 	GlobalPermissions []string `json:"global_permissions"`
+	Owners            []string `json:"owners,omitempty"`
 }
 
 type Filter struct {
-	Name       string `json:"name"`
-	PolicyRule string `json:"policy_rule"`
+	Name       string   `json:"name"`
+	PolicyRule string   `json:"policy_rule"`
+	Owners     []string `json:"owners,omitempty"`
 }
 
 type Mask struct {
-	Name string  `json:"name"`
-	Type *string `json:"type,omitempty"`
+	Name   string   `json:"name"`
+	Type   *string  `json:"type,omitempty"`
+	Owners []string `json:"owners,omitempty"`
 }

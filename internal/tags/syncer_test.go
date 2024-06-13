@@ -11,8 +11,8 @@ import (
 	"github.com/raito-io/cli/base/wrappers/mocks"
 	"github.com/stretchr/testify/assert"
 
-	"cli-plugin-dbt/internal/constants"
-	"cli-plugin-dbt/internal/manifest"
+	"github.com/raito-io/cli-plugin-dbt/internal/constants"
+	"github.com/raito-io/cli-plugin-dbt/internal/manifest"
 )
 
 func TestTagImportService_SyncTags(t *testing.T) {

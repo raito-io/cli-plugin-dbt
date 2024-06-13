@@ -7,8 +7,8 @@ import (
 	"github.com/raito-io/cli/base/resource_provider"
 	"github.com/raito-io/cli/base/wrappers"
 
-	"cli-plugin-dbt/internal/constants"
-	"cli-plugin-dbt/internal/utils"
+	"github.com/raito-io/cli-plugin-dbt/internal/constants"
+	"github.com/raito-io/cli-plugin-dbt/internal/utils"
 )
 
 var _ wrappers.ResourceProviderSyncer = (*ResourceSyncer)(nil)

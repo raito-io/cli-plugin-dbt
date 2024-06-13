@@ -32,3 +32,11 @@ func NewClient(ctx context.Context, config *DbtConfig) *sdk.RaitoClient {
 func NewAccessProviderClient(client *sdk.RaitoClient) *services.AccessProviderClient {
 	return client.AccessProvider()
 }
+
+func NewUserClient(client *sdk.RaitoClient) *services.UserClient {
+	return client.User()
+}
+
+func NewRoleClient(client *sdk.RaitoClient) *services.RoleClient {
+	return client.Role()
+}
