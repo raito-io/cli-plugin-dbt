@@ -73,7 +73,7 @@ require (
 	github.com/spf13/viper v1.18.2 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	github.com/vektah/gqlparser/v2 v2.5.11 // indirect
+	github.com/vektah/gqlparser/v2 v2.5.15 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f // indirect
 	golang.org/x/mod v0.17.0 // indirect
