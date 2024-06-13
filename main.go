@@ -9,7 +9,7 @@ import (
 	"github.com/raito-io/cli/base/util/plugin"
 	"github.com/raito-io/cli/base/wrappers"
 
-	"cli-plugin-dbt/internal/constants"
+	"github.com/raito-io/cli-plugin-dbt/internal/constants"
 )
 
 var version = "0.0.0"

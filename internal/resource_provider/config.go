@@ -3,7 +3,7 @@ package resource_provider
 import (
 	"github.com/raito-io/cli/base/resource_provider"
 
-	"cli-plugin-dbt/internal/raito"
+	"github.com/raito-io/cli-plugin-dbt/internal/raito"
 )
 
 func ParseConfig(input *resource_provider.UpdateResourceInput) *raito.DbtConfig {

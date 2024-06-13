@@ -9,9 +9,9 @@ import (
 	"github.com/raito-io/cli/base/wrappers"
 	"github.com/raito-io/golang-set/set"
 
-	"cli-plugin-dbt/internal/constants"
-	"cli-plugin-dbt/internal/manifest"
-	"cli-plugin-dbt/internal/utils"
+	"github.com/raito-io/cli-plugin-dbt/internal/constants"
+	"github.com/raito-io/cli-plugin-dbt/internal/manifest"
+	"github.com/raito-io/cli-plugin-dbt/internal/utils"
 )
 
 var _ wrappers.TagSyncer = (*TagImportService)(nil)

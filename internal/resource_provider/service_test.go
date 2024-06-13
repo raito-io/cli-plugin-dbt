@@ -18,21 +18,29 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"cli-plugin-dbt/internal/manifest"
+	"github.com/raito-io/cli-plugin-dbt/internal/manifest"
 )
 
 func TestDbtService_createAndUpdateAccessProviders(t *testing.T) {
+	currentUser := sdkTypes.User{
+		Id:          "CurrentUserId",
+		Name:        "CurrentUser",
+		Email:       ptr.String("currentUser@raito.io"),
+		IsRaitoUser: true,
+		Type:        "machine",
+	}
+
 	type fields struct {
 		dataSourceId string
-		setup        func(apClientMock *MockAccessProviderClient)
+		setup        func(apClientMock *MockAccessProviderClient, roleMock *MockRoleClient, userMock *MockUserRepo)
 	}
 	type args struct {
 		ctx         context.Context
-		grants      map[string]*sdkTypes.AccessProviderInput
+		grants      map[string]*AccessProviderInput
 		grantIds    map[string]string
-		masks       map[string]*sdkTypes.AccessProviderInput
+		masks       map[string]*AccessProviderInput
 		maskIds     map[string]string
-		filters     map[string]*sdkTypes.AccessProviderInput
+		filters     map[string]*AccessProviderInput
 		filterIds   map[string]string
 		apsToRemove set.Set[string]
 	}
@@ -53,21 +61,30 @@ func TestDbtService_createAndUpdateAccessProviders(t *testing.T) {
 			name: "create and update grants",
 			fields: fields{
 				dataSourceId: "dsId1",
-				setup: func(apClientMock *MockAccessProviderClient) {
-					apClientMock.EXPECT().CreateAccessProvider(mock.Anything, sdkTypes.AccessProviderInput{Name: ptr.String("grantName"), Action: utils.Ptr(models.AccessProviderActionGrant)}).Return(&sdkTypes.AccessProvider{Name: "grantName"}, nil).Once()
+				setup: func(apClientMock *MockAccessProviderClient, roleMock *MockRoleClient, userMock *MockUserRepo) {
+					apClientMock.EXPECT().CreateAccessProvider(mock.Anything, sdkTypes.AccessProviderInput{Name: ptr.String("grantName"), Action: utils.Ptr(models.AccessProviderActionGrant)}).Return(&sdkTypes.AccessProvider{Name: "grantName", Id: "generatedGrantId1"}, nil).Once()
 					apClientMock.EXPECT().UpdateAccessProvider(mock.Anything, "grantId2", sdkTypes.AccessProviderInput{Name: ptr.String("grantName2"), Action: utils.Ptr(models.AccessProviderActionGrant)}, mock.Anything).Return(&sdkTypes.AccessProvider{Name: "grantName2"}, nil).Once()
+
+					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "generatedGrantId1", ownerRoleId, "owner1").Return(nil, nil)
+					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "grantId2", ownerRoleId, currentUser.Id).Return(nil, nil)
 				},
 			},
 			args: args{
 				ctx: context.Background(),
-				grants: map[string]*sdkTypes.AccessProviderInput{
+				grants: map[string]*AccessProviderInput{
 					"grantName": {
-						Name:   ptr.String("grantName"),
-						Action: utils.Ptr(models.AccessProviderActionGrant),
+						Input: sdkTypes.AccessProviderInput{
+							Name:   ptr.String("grantName"),
+							Action: utils.Ptr(models.AccessProviderActionGrant),
+						},
+						Owners: set.NewSet("owner1"),
 					},
 					"grantName2": {
-						Name:   ptr.String("grantName2"),
-						Action: utils.Ptr(models.AccessProviderActionGrant),
+						Input: sdkTypes.AccessProviderInput{
+							Name:   ptr.String("grantName2"),
+							Action: utils.Ptr(models.AccessProviderActionGrant),
+						},
+						Owners: set.NewSet[string](),
 					},
 				},
 				grantIds: map[string]string{"grantName2": "grantId2"},
@@ -84,16 +101,19 @@ func TestDbtService_createAndUpdateAccessProviders(t *testing.T) {
 			name: "create filters",
 			fields: fields{
 				dataSourceId: "dsId1",
-				setup: func(apClientMock *MockAccessProviderClient) {
-					apClientMock.EXPECT().CreateAccessProvider(mock.Anything, sdkTypes.AccessProviderInput{Name: ptr.String("filterName1"), Action: utils.Ptr(models.AccessProviderActionFiltered)}).Return(&sdkTypes.AccessProvider{Name: "filterName"}, nil)
+				setup: func(apClientMock *MockAccessProviderClient, roleMock *MockRoleClient, userMock *MockUserRepo) {
+					apClientMock.EXPECT().CreateAccessProvider(mock.Anything, sdkTypes.AccessProviderInput{Name: ptr.String("filterName1"), Action: utils.Ptr(models.AccessProviderActionFiltered)}).Return(&sdkTypes.AccessProvider{Name: "filterName", Id: "filterId1"}, nil)
 					apClientMock.EXPECT().UpdateAccessProvider(mock.Anything, "filterId2", sdkTypes.AccessProviderInput{Name: ptr.String("filterName2"), Action: utils.Ptr(models.AccessProviderActionFiltered)}, mock.Anything).Return(&sdkTypes.AccessProvider{Name: "filterName2"}, nil)
+
+					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "filterId1", ownerRoleId, "owner1").Return(nil, nil)
+					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "filterId2", ownerRoleId, currentUser.Id).Return(nil, nil)
 				},
 			},
 			args: args{
 				ctx: context.Background(),
-				filters: map[string]*sdkTypes.AccessProviderInput{
-					"filterName1": {Name: ptr.String("filterName1"), Action: utils.Ptr(models.AccessProviderActionFiltered)},
-					"filterName2": {Name: ptr.String("filterName2"), Action: utils.Ptr(models.AccessProviderActionFiltered)},
+				filters: map[string]*AccessProviderInput{
+					"filterName1": {Input: sdkTypes.AccessProviderInput{Name: ptr.String("filterName1"), Action: utils.Ptr(models.AccessProviderActionFiltered)}, Owners: set.NewSet("owner1")},
+					"filterName2": {Input: sdkTypes.AccessProviderInput{Name: ptr.String("filterName2"), Action: utils.Ptr(models.AccessProviderActionFiltered)}, Owners: set.NewSet[string]()},
 				},
 				filterIds: map[string]string{"filterName2": "filterId2"},
 			},
@@ -108,16 +128,18 @@ func TestDbtService_createAndUpdateAccessProviders(t *testing.T) {
 			name: "create masks",
 			fields: fields{
 				dataSourceId: "dsId1",
-				setup: func(apClientMock *MockAccessProviderClient) {
+				setup: func(apClientMock *MockAccessProviderClient, roleMock *MockRoleClient, userMock *MockUserRepo) {
 					apClientMock.EXPECT().CreateAccessProvider(mock.Anything, sdkTypes.AccessProviderInput{Name: ptr.String("maskName1"), Action: utils.Ptr(models.AccessProviderActionMask)}).Return(&sdkTypes.AccessProvider{Name: "maskName1"}, nil)
 					apClientMock.EXPECT().UpdateAccessProvider(mock.Anything, "maskId2", sdkTypes.AccessProviderInput{Name: ptr.String("maskName2"), Action: utils.Ptr(models.AccessProviderActionMask)}, mock.Anything).Return(&sdkTypes.AccessProvider{Name: "maskName2"}, nil)
+
+					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "maskId2", ownerRoleId, "Owner1").Return(nil, nil)
 				},
 			},
 			args: args{
 				ctx: context.Background(),
-				masks: map[string]*sdkTypes.AccessProviderInput{
-					"maskName1": {Name: ptr.String("maskName1"), Action: utils.Ptr(models.AccessProviderActionMask)},
-					"maskName2": {Name: ptr.String("maskName2"), Action: utils.Ptr(models.AccessProviderActionMask)},
+				masks: map[string]*AccessProviderInput{
+					"maskName1": {Input: sdkTypes.AccessProviderInput{Name: ptr.String("maskName1"), Action: utils.Ptr(models.AccessProviderActionMask)}, Owners: set.NewSet[string]()},
+					"maskName2": {Input: sdkTypes.AccessProviderInput{Name: ptr.String("maskName2"), Action: utils.Ptr(models.AccessProviderActionMask)}, Owners: set.NewSet[string]("Owner1")},
 				},
 				maskIds: map[string]string{"maskName2": "maskId2"},
 			},
@@ -133,7 +155,7 @@ func TestDbtService_createAndUpdateAccessProviders(t *testing.T) {
 			name: "remove access providers",
 			fields: fields{
 				dataSourceId: "dsId1",
-				setup: func(apClientMock *MockAccessProviderClient) {
+				setup: func(apClientMock *MockAccessProviderClient, roleMock *MockRoleClient, userMock *MockUserRepo) {
 					apClientMock.EXPECT().DeleteAccessProvider(mock.Anything, "maskId2", mock.Anything).Return(nil)
 					apClientMock.EXPECT().DeleteAccessProvider(mock.Anything, "filterId2", mock.Anything).Return(nil)
 					apClientMock.EXPECT().DeleteAccessProvider(mock.Anything, "grantId2", mock.Anything).Return(nil)
@@ -155,39 +177,64 @@ func TestDbtService_createAndUpdateAccessProviders(t *testing.T) {
 			name: "successful update",
 			fields: fields{
 				dataSourceId: "dsId1",
-				setup: func(apClientMock *MockAccessProviderClient) {
-					apClientMock.EXPECT().CreateAccessProvider(mock.Anything, sdkTypes.AccessProviderInput{Name: ptr.String("grantName"), Action: utils.Ptr(models.AccessProviderActionGrant)}).Return(&sdkTypes.AccessProvider{Name: "grantName"}, nil).Once()
+				setup: func(apClientMock *MockAccessProviderClient, roleMock *MockRoleClient, userMock *MockUserRepo) {
+					apClientMock.EXPECT().CreateAccessProvider(mock.Anything, sdkTypes.AccessProviderInput{Name: ptr.String("grantName"), Action: utils.Ptr(models.AccessProviderActionGrant)}).Return(&sdkTypes.AccessProvider{Name: "grantName", Id: "grantId1"}, nil).Once()
 					apClientMock.EXPECT().UpdateAccessProvider(mock.Anything, "grantId2", sdkTypes.AccessProviderInput{Name: ptr.String("grantName2"), Action: utils.Ptr(models.AccessProviderActionGrant)}, mock.Anything).Return(&sdkTypes.AccessProvider{Name: "grantName2"}, nil).Once()
-					apClientMock.EXPECT().CreateAccessProvider(mock.Anything, sdkTypes.AccessProviderInput{Name: ptr.String("filterName1"), Action: utils.Ptr(models.AccessProviderActionFiltered)}).Return(&sdkTypes.AccessProvider{Name: "filterName"}, nil)
+					apClientMock.EXPECT().CreateAccessProvider(mock.Anything, sdkTypes.AccessProviderInput{Name: ptr.String("filterName1"), Action: utils.Ptr(models.AccessProviderActionFiltered)}).Return(&sdkTypes.AccessProvider{Name: "filterName", Id: "filterId1"}, nil)
 					apClientMock.EXPECT().UpdateAccessProvider(mock.Anything, "filterId2", sdkTypes.AccessProviderInput{Name: ptr.String("filterName2"), Action: utils.Ptr(models.AccessProviderActionFiltered)}, mock.Anything).Return(&sdkTypes.AccessProvider{Name: "filterName2"}, nil)
-					apClientMock.EXPECT().CreateAccessProvider(mock.Anything, sdkTypes.AccessProviderInput{Name: ptr.String("maskName1"), Action: utils.Ptr(models.AccessProviderActionMask)}).Return(&sdkTypes.AccessProvider{Name: "maskName1"}, nil)
+					apClientMock.EXPECT().CreateAccessProvider(mock.Anything, sdkTypes.AccessProviderInput{Name: ptr.String("maskName1"), Action: utils.Ptr(models.AccessProviderActionMask)}).Return(&sdkTypes.AccessProvider{Name: "maskName1", Id: "maskId1"}, nil)
 					apClientMock.EXPECT().UpdateAccessProvider(mock.Anything, "maskId2", sdkTypes.AccessProviderInput{Name: ptr.String("maskName2"), Action: utils.Ptr(models.AccessProviderActionMask)}, mock.Anything).Return(&sdkTypes.AccessProvider{Name: "maskName2"}, nil)
 					apClientMock.EXPECT().DeleteAccessProvider(mock.Anything, "maskId3", mock.Anything).Return(nil)
 					apClientMock.EXPECT().DeleteAccessProvider(mock.Anything, "filterId3", mock.Anything).Return(nil)
 					apClientMock.EXPECT().DeleteAccessProvider(mock.Anything, "grantId3", mock.Anything).Return(nil)
+
+					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "maskId2", ownerRoleId, currentUser.Id).Return(nil, nil)
+					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "grantId1", ownerRoleId, "Owner1").Return(nil, nil)
+					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "filterId1", ownerRoleId, "Owner1").Return(nil, nil)
+					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "maskId1", ownerRoleId, "Owner1").Return(nil, nil)
+					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "filterId2", ownerRoleId, currentUser.Id).Return(nil, nil)
+					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "grantId2", ownerRoleId, currentUser.Id).Return(nil, nil)
 				},
 			},
 			args: args{
 				ctx: context.Background(),
-				grants: map[string]*sdkTypes.AccessProviderInput{
+				grants: map[string]*AccessProviderInput{
 					"grantName": {
-						Name:   ptr.String("grantName"),
-						Action: utils.Ptr(models.AccessProviderActionGrant),
+						Input: sdkTypes.AccessProviderInput{
+							Name:   ptr.String("grantName"),
+							Action: utils.Ptr(models.AccessProviderActionGrant),
+						},
+						Owners: set.NewSet("Owner1"),
 					},
 					"grantName2": {
-						Name:   ptr.String("grantName2"),
-						Action: utils.Ptr(models.AccessProviderActionGrant),
+						Input: sdkTypes.AccessProviderInput{
+							Name:   ptr.String("grantName2"),
+							Action: utils.Ptr(models.AccessProviderActionGrant),
+						},
+						Owners: set.NewSet[string](),
 					},
 				},
 				grantIds: map[string]string{"grantName2": "grantId2"},
-				filters: map[string]*sdkTypes.AccessProviderInput{
-					"filterName1": {Name: ptr.String("filterName1"), Action: utils.Ptr(models.AccessProviderActionFiltered)},
-					"filterName2": {Name: ptr.String("filterName2"), Action: utils.Ptr(models.AccessProviderActionFiltered)},
+				filters: map[string]*AccessProviderInput{
+					"filterName1": {
+						Input:  sdkTypes.AccessProviderInput{Name: ptr.String("filterName1"), Action: utils.Ptr(models.AccessProviderActionFiltered)},
+						Owners: set.NewSet("Owner1"),
+					},
+					"filterName2": {
+						Input:  sdkTypes.AccessProviderInput{Name: ptr.String("filterName2"), Action: utils.Ptr(models.AccessProviderActionFiltered)},
+						Owners: set.NewSet[string](),
+					},
 				},
 				filterIds: map[string]string{"filterName2": "filterId2"},
-				masks: map[string]*sdkTypes.AccessProviderInput{
-					"maskName1": {Name: ptr.String("maskName1"), Action: utils.Ptr(models.AccessProviderActionMask)},
-					"maskName2": {Name: ptr.String("maskName2"), Action: utils.Ptr(models.AccessProviderActionMask)},
+				masks: map[string]*AccessProviderInput{
+					"maskName1": {
+						Input:  sdkTypes.AccessProviderInput{Name: ptr.String("maskName1"), Action: utils.Ptr(models.AccessProviderActionMask)},
+						Owners: set.NewSet("Owner1"),
+					},
+					"maskName2": {
+						Input:  sdkTypes.AccessProviderInput{Name: ptr.String("maskName2"), Action: utils.Ptr(models.AccessProviderActionMask)},
+						Owners: set.NewSet[string](),
+					},
 				},
 				maskIds:     map[string]string{"maskName2": "maskId2"},
 				apsToRemove: set.NewSet("maskId3", "filterId3", "grantId3"),
@@ -203,39 +250,57 @@ func TestDbtService_createAndUpdateAccessProviders(t *testing.T) {
 			name: "update with errors",
 			fields: fields{
 				dataSourceId: "dsId1",
-				setup: func(apClientMock *MockAccessProviderClient) {
-					apClientMock.EXPECT().CreateAccessProvider(mock.Anything, sdkTypes.AccessProviderInput{Name: ptr.String("grantName"), Action: utils.Ptr(models.AccessProviderActionGrant)}).Return(&sdkTypes.AccessProvider{Name: "grantName"}, nil).Once()
+				setup: func(apClientMock *MockAccessProviderClient, roleMock *MockRoleClient, userMock *MockUserRepo) {
+					apClientMock.EXPECT().CreateAccessProvider(mock.Anything, sdkTypes.AccessProviderInput{Name: ptr.String("grantName"), Action: utils.Ptr(models.AccessProviderActionGrant)}).Return(&sdkTypes.AccessProvider{Name: "grantName", Id: "grantId1"}, nil).Once()
 					apClientMock.EXPECT().UpdateAccessProvider(mock.Anything, "grantId2", sdkTypes.AccessProviderInput{Name: ptr.String("grantName2"), Action: utils.Ptr(models.AccessProviderActionGrant)}, mock.Anything).Return(&sdkTypes.AccessProvider{Name: "grantName2"}, nil).Once()
-					apClientMock.EXPECT().CreateAccessProvider(mock.Anything, sdkTypes.AccessProviderInput{Name: ptr.String("filterName1"), Action: utils.Ptr(models.AccessProviderActionFiltered)}).Return(&sdkTypes.AccessProvider{Name: "filterName"}, nil)
+					apClientMock.EXPECT().CreateAccessProvider(mock.Anything, sdkTypes.AccessProviderInput{Name: ptr.String("filterName1"), Action: utils.Ptr(models.AccessProviderActionFiltered)}).Return(&sdkTypes.AccessProvider{Name: "filterName", Id: "filterId1"}, nil)
 					apClientMock.EXPECT().UpdateAccessProvider(mock.Anything, "filterId2", sdkTypes.AccessProviderInput{Name: ptr.String("filterName2"), Action: utils.Ptr(models.AccessProviderActionFiltered)}, mock.Anything).Return(nil, errors.New("error")).Once()
-					apClientMock.EXPECT().CreateAccessProvider(mock.Anything, sdkTypes.AccessProviderInput{Name: ptr.String("maskName1"), Action: utils.Ptr(models.AccessProviderActionMask)}).Return(&sdkTypes.AccessProvider{Name: "maskName1"}, nil)
+					apClientMock.EXPECT().CreateAccessProvider(mock.Anything, sdkTypes.AccessProviderInput{Name: ptr.String("maskName1"), Action: utils.Ptr(models.AccessProviderActionMask)}).Return(&sdkTypes.AccessProvider{Name: "maskName1", Id: "maskId1"}, nil)
 					apClientMock.EXPECT().UpdateAccessProvider(mock.Anything, "maskId2", sdkTypes.AccessProviderInput{Name: ptr.String("maskName2"), Action: utils.Ptr(models.AccessProviderActionMask)}, mock.Anything).Return(&sdkTypes.AccessProvider{Name: "maskName2"}, nil)
 					apClientMock.EXPECT().DeleteAccessProvider(mock.Anything, "maskId3", mock.Anything).Return(nil)
 					apClientMock.EXPECT().DeleteAccessProvider(mock.Anything, "filterId3", mock.Anything).Return(errors.New("some error")).Once()
 					apClientMock.EXPECT().DeleteAccessProvider(mock.Anything, "grantId3", mock.Anything).Return(nil)
+
+					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "maskId2", ownerRoleId, currentUser.Id).Return(nil, nil)
+					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "grantId1", ownerRoleId, "Owner1").Return(nil, nil)
+					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "filterId1", ownerRoleId, "Owner1").Return(nil, nil)
+					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "maskId1", ownerRoleId, "Owner1").Return(nil, nil)
+					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "grantId2", ownerRoleId, currentUser.Id).Return(nil, nil)
 				},
 			},
 			args: args{
 				ctx: context.Background(),
-				grants: map[string]*sdkTypes.AccessProviderInput{
+				grants: map[string]*AccessProviderInput{
 					"grantName": {
-						Name:   ptr.String("grantName"),
-						Action: utils.Ptr(models.AccessProviderActionGrant),
+						Input: sdkTypes.AccessProviderInput{
+							Name:   ptr.String("grantName"),
+							Action: utils.Ptr(models.AccessProviderActionGrant),
+						},
+						Owners: set.NewSet("Owner1"),
 					},
 					"grantName2": {
-						Name:   ptr.String("grantName2"),
-						Action: utils.Ptr(models.AccessProviderActionGrant),
+						Input: sdkTypes.AccessProviderInput{
+							Name:   ptr.String("grantName2"),
+							Action: utils.Ptr(models.AccessProviderActionGrant),
+						},
+						Owners: set.NewSet[string](),
 					},
 				},
 				grantIds: map[string]string{"grantName2": "grantId2"},
-				filters: map[string]*sdkTypes.AccessProviderInput{
-					"filterName1": {Name: ptr.String("filterName1"), Action: utils.Ptr(models.AccessProviderActionFiltered)},
-					"filterName2": {Name: ptr.String("filterName2"), Action: utils.Ptr(models.AccessProviderActionFiltered)},
+				filters: map[string]*AccessProviderInput{
+					"filterName1": {
+						Input:  sdkTypes.AccessProviderInput{Name: ptr.String("filterName1"), Action: utils.Ptr(models.AccessProviderActionFiltered)},
+						Owners: set.NewSet("Owner1"),
+					},
+					"filterName2": {
+						Input:  sdkTypes.AccessProviderInput{Name: ptr.String("filterName2"), Action: utils.Ptr(models.AccessProviderActionFiltered)},
+						Owners: set.NewSet[string](),
+					},
 				},
 				filterIds: map[string]string{"filterName2": "filterId2"},
-				masks: map[string]*sdkTypes.AccessProviderInput{
-					"maskName1": {Name: ptr.String("maskName1"), Action: utils.Ptr(models.AccessProviderActionMask)},
-					"maskName2": {Name: ptr.String("maskName2"), Action: utils.Ptr(models.AccessProviderActionMask)},
+				masks: map[string]*AccessProviderInput{
+					"maskName1": {Input: sdkTypes.AccessProviderInput{Name: ptr.String("maskName1"), Action: utils.Ptr(models.AccessProviderActionMask)}, Owners: set.NewSet("Owner1")},
+					"maskName2": {Input: sdkTypes.AccessProviderInput{Name: ptr.String("maskName2"), Action: utils.Ptr(models.AccessProviderActionMask)}, Owners: set.NewSet[string]()},
 				},
 				maskIds:     map[string]string{"maskName2": "maskId2"},
 				apsToRemove: set.NewSet("maskId3", "filterId3", "grantId3"),
@@ -251,10 +316,10 @@ func TestDbtService_createAndUpdateAccessProviders(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, apMock := createDbtService(t, tt.fields.dataSourceId)
-			tt.fields.setup(apMock)
+			s, apMock, roleMock, userMock := createDbtService(t, tt.fields.dataSourceId)
+			tt.fields.setup(apMock, roleMock, userMock)
 
-			added, updated, removed, failures, err := s.createAndUpdateAccessProviders(tt.args.ctx, tt.args.grants, tt.args.grantIds, tt.args.masks, tt.args.maskIds, tt.args.filters, tt.args.filterIds, tt.args.apsToRemove)
+			added, updated, removed, failures, err := s.createAndUpdateAccessProviders(tt.args.ctx, &currentUser, tt.args.grants, tt.args.grantIds, tt.args.masks, tt.args.maskIds, tt.args.filters, tt.args.filterIds, tt.args.apsToRemove)
 
 			if (err != nil) != tt.wantErr {
 				t.Errorf("createAndUpdateAccessProviders() error = %v, wantErr %v", err, tt.wantErr)
@@ -271,13 +336,13 @@ func TestDbtService_createAndUpdateAccessProviders(t *testing.T) {
 func TestDbtService_loadExistingAps(t *testing.T) {
 	type fields struct {
 		dataSourceId string
-		setup        func(apClientMock *MockAccessProviderClient)
+		setup        func(apClientMock *MockAccessProviderClient, roleMock *MockRoleClient, userMock *MockUserRepo)
 	}
 	type args struct {
 		ctx     context.Context
-		grants  map[string]*sdkTypes.AccessProviderInput
-		filters map[string]*sdkTypes.AccessProviderInput
-		masks   map[string]*sdkTypes.AccessProviderInput
+		grants  map[string]*AccessProviderInput
+		filters map[string]*AccessProviderInput
+		masks   map[string]*AccessProviderInput
 	}
 	tests := []struct {
 		name            string
@@ -293,7 +358,7 @@ func TestDbtService_loadExistingAps(t *testing.T) {
 			name: "success",
 			fields: fields{
 				dataSourceId: "datasourceId1",
-				setup: func(apClientMock *MockAccessProviderClient) {
+				setup: func(apClientMock *MockAccessProviderClient, roleMock *MockRoleClient, userMock *MockUserRepo) {
 					apClientMock.EXPECT().ListAccessProviders(mock.Anything, mock.Anything).RunAndReturn(func(ctx context.Context, f ...func(*services.AccessProviderListOptions)) <-chan sdkTypes.ListItem[sdkTypes.AccessProvider] {
 						outputChannel := make(chan sdkTypes.ListItem[sdkTypes.AccessProvider], 1)
 						go func() {
@@ -337,26 +402,34 @@ func TestDbtService_loadExistingAps(t *testing.T) {
 			},
 			args: args{
 				ctx: context.Background(),
-				grants: map[string]*sdkTypes.AccessProviderInput{
+				grants: map[string]*AccessProviderInput{
 					"access provider 1": {
-						Name:   ptr.String("access provider 1"),
-						Action: utils.Ptr(models.AccessProviderActionGrant),
+						Input: sdkTypes.AccessProviderInput{
+							Name:   ptr.String("access provider 1"),
+							Action: utils.Ptr(models.AccessProviderActionGrant),
+						},
 					},
 				},
-				filters: map[string]*sdkTypes.AccessProviderInput{
+				filters: map[string]*AccessProviderInput{
 					"access provider 2": {
-						Name:   ptr.String("access provider 2"),
-						Action: utils.Ptr(models.AccessProviderActionFiltered),
+						Input: sdkTypes.AccessProviderInput{
+							Name:   ptr.String("access provider 2"),
+							Action: utils.Ptr(models.AccessProviderActionFiltered),
+						},
 					},
 					"access provider 5": {
-						Name:   ptr.String("access provider 5"),
-						Action: utils.Ptr(models.AccessProviderActionFiltered),
+						Input: sdkTypes.AccessProviderInput{
+							Name:   ptr.String("access provider 5"),
+							Action: utils.Ptr(models.AccessProviderActionFiltered),
+						},
 					},
 				},
-				masks: map[string]*sdkTypes.AccessProviderInput{
+				masks: map[string]*AccessProviderInput{
 					"access provider 3": {
-						Name:   ptr.String("access provider 3"),
-						Action: utils.Ptr(models.AccessProviderActionMask),
+						Input: sdkTypes.AccessProviderInput{
+							Name:   ptr.String("access provider 3"),
+							Action: utils.Ptr(models.AccessProviderActionMask),
+						},
 					},
 				},
 			},
@@ -370,7 +443,7 @@ func TestDbtService_loadExistingAps(t *testing.T) {
 			name: "multiple access providers with same name",
 			fields: fields{
 				dataSourceId: "datasourceId1",
-				setup: func(apClientMock *MockAccessProviderClient) {
+				setup: func(apClientMock *MockAccessProviderClient, roleMock *MockRoleClient, userMock *MockUserRepo) {
 					apClientMock.EXPECT().ListAccessProviders(mock.Anything, mock.Anything).RunAndReturn(func(ctx context.Context, f ...func(*services.AccessProviderListOptions)) <-chan sdkTypes.ListItem[sdkTypes.AccessProvider] {
 						outputChannel := make(chan sdkTypes.ListItem[sdkTypes.AccessProvider], 1)
 						go func() {
@@ -420,26 +493,34 @@ func TestDbtService_loadExistingAps(t *testing.T) {
 			},
 			args: args{
 				ctx: context.Background(),
-				grants: map[string]*sdkTypes.AccessProviderInput{
+				grants: map[string]*AccessProviderInput{
 					"access provider with duplicated name": {
-						Name:   ptr.String("access provider with duplicated name"),
-						Action: utils.Ptr(models.AccessProviderActionGrant),
+						Input: sdkTypes.AccessProviderInput{
+							Name:   ptr.String("access provider with duplicated name"),
+							Action: utils.Ptr(models.AccessProviderActionGrant),
+						},
 					},
 				},
-				filters: map[string]*sdkTypes.AccessProviderInput{
+				filters: map[string]*AccessProviderInput{
 					"access provider with duplicated name": {
-						Name:   ptr.String("access provider with duplicated name"),
-						Action: utils.Ptr(models.AccessProviderActionFiltered),
+						Input: sdkTypes.AccessProviderInput{
+							Name:   ptr.String("access provider with duplicated name"),
+							Action: utils.Ptr(models.AccessProviderActionFiltered),
+						},
 					},
 					"new access provider": {
-						Name:   ptr.String("new access provider 5"),
-						Action: utils.Ptr(models.AccessProviderActionFiltered),
+						Input: sdkTypes.AccessProviderInput{
+							Name:   ptr.String("new access provider 5"),
+							Action: utils.Ptr(models.AccessProviderActionFiltered),
+						},
 					},
 				},
-				masks: map[string]*sdkTypes.AccessProviderInput{
+				masks: map[string]*AccessProviderInput{
 					"access provider with duplicated name": {
-						Name:   ptr.String("aaccess provider with duplicated name"),
-						Action: utils.Ptr(models.AccessProviderActionMask),
+						Input: sdkTypes.AccessProviderInput{
+							Name:   ptr.String("aaccess provider with duplicated name"),
+							Action: utils.Ptr(models.AccessProviderActionMask),
+						},
 					},
 				},
 			},
@@ -452,8 +533,8 @@ func TestDbtService_loadExistingAps(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, apClientMock := createDbtService(t, tt.fields.dataSourceId)
-			tt.fields.setup(apClientMock)
+			s, apClientMock, roleMock, userMock := createDbtService(t, tt.fields.dataSourceId)
+			tt.fields.setup(apClientMock, roleMock, userMock)
 
 			got, got1, got2, got3, err := s.loadExistingAps(tt.args.ctx, "dpt-project", tt.args.grants, tt.args.filters, tt.args.masks)
 			if (err != nil) != tt.wantErr {
@@ -478,7 +559,7 @@ func TestDbtService_loadExistingAps(t *testing.T) {
 
 func TestDbtService_RunDbt(t *testing.T) {
 	type fields struct {
-		setup        func(client *MockAccessProviderClient)
+		setup        func(client *MockAccessProviderClient, roleMock *MockRoleClient, userMock *MockUserRepo)
 		dataSourceId string
 	}
 	type args struct {
@@ -501,7 +582,28 @@ func TestDbtService_RunDbt(t *testing.T) {
 		{
 			name: "manifest file 1",
 			fields: fields{
-				setup: func(client *MockAccessProviderClient) {
+				setup: func(client *MockAccessProviderClient, roleMock *MockRoleClient, userMock *MockUserRepo) {
+					userMock.EXPECT().GetCurrentUser(mock.Anything).Return(&sdkTypes.User{
+						Id:   "CurrentUserId",
+						Name: "CurrentUser",
+					}, nil).Once()
+
+					userMock.EXPECT().GetUserByEmail(mock.Anything, "user1@raito.io").Return(&sdkTypes.User{
+						Id:   "user1Id",
+						Name: "User1",
+					}, nil)
+
+					userMock.EXPECT().GetUserByEmail(mock.Anything, "user2@raito.io").Return(&sdkTypes.User{
+						Id:   "user2Id",
+						Name: "User2",
+					}, nil)
+
+					roleMock.EXPECT().UpdateRoleAssigneesOnAccessProvider(mock.Anything, "apId1", ownerRoleId, mock.Anything, mock.Anything).RunAndReturn(func(ctx context.Context, apId string, roleId string, assignees ...string) (*sdkTypes.Role, error) {
+						assert.ElementsMatch(t, []string{"user1Id", "user2Id"}, assignees)
+
+						return nil, nil
+					})
+
 					client.EXPECT().ListAccessProviders(mock.Anything, mock.Anything).RunAndReturn(func(ctx context.Context, f ...func(*services.AccessProviderListOptions)) <-chan sdkTypes.ListItem[sdkTypes.AccessProvider] {
 						outputChannel := make(chan sdkTypes.ListItem[sdkTypes.AccessProvider])
 
@@ -591,7 +693,7 @@ func TestDbtService_RunDbt(t *testing.T) {
 								},
 							},
 						},
-					}).Return(nil, nil).Once()
+					}).Return(&sdkTypes.AccessProvider{Id: "counter_filter_eu_id_1"}, nil).Once()
 
 					client.EXPECT().CreateAccessProvider(mock.Anything, sdkTypes.AccessProviderInput{
 						Name:       utils.Ptr("email_masking"),
@@ -624,7 +726,7 @@ func TestDbtService_RunDbt(t *testing.T) {
 								},
 							},
 						},
-					}).Return(nil, nil).Once()
+					}).Return(&sdkTypes.AccessProvider{Id: "email_masking_id_2"}, nil).Once()
 
 					client.EXPECT().DeleteAccessProvider(mock.Anything, "apId2", mock.Anything).Return(nil).Once()
 
@@ -646,9 +748,9 @@ func TestDbtService_RunDbt(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, accessProviderClientMock := createDbtService(t, tt.fields.dataSourceId)
+			s, accessProviderClientMock, roleMock, userMock := createDbtService(t, tt.fields.dataSourceId)
 
-			tt.fields.setup(accessProviderClientMock)
+			tt.fields.setup(accessProviderClientMock, roleMock, userMock)
 
 			added, updated, removed, failures, err := s.RunDbt(tt.args.ctx, tt.args.dbtFile, "prefix.")
 			if !tt.wantErr(t, err, fmt.Sprintf("RunDbt(%v, %v)", tt.args.ctx, tt.args.dbtFile)) {
@@ -662,14 +764,16 @@ func TestDbtService_RunDbt(t *testing.T) {
 	}
 }
 
-func createDbtService(t *testing.T, dataSourceId string) (*DbtService, *MockAccessProviderClient) {
+func createDbtService(t *testing.T, dataSourceId string) (*DbtService, *MockAccessProviderClient, *MockRoleClient, *MockUserRepo) {
 	t.Helper()
 
 	apMock := NewMockAccessProviderClient(t)
+	roleMock := NewMockRoleClient(t)
+	userRepoMock := NewMockUserRepo(t)
 	logger := hclog.NewNullLogger()
 	manifestParser := manifest.NewManifestParser()
 
-	service := NewDbtService(&resource_provider.UpdateResourceInput{DataSourceId: dataSourceId}, apMock, manifestParser, logger)
+	service := NewDbtService(&resource_provider.UpdateResourceInput{DataSourceId: dataSourceId}, apMock, userRepoMock, roleMock, manifestParser, logger)
 
-	return service, apMock
+	return service, apMock, roleMock, userRepoMock
 }

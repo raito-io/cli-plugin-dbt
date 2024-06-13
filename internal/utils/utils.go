@@ -5,7 +5,7 @@ import (
 	"github.com/raito-io/cli/base"
 	"github.com/raito-io/cli/base/util/config"
 
-	"cli-plugin-dbt/internal/constants"
+	"github.com/raito-io/cli-plugin-dbt/internal/constants"
 )
 
 var logger hclog.Logger
