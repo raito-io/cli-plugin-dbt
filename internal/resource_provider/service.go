@@ -38,7 +38,6 @@ type RoleClient interface {
 
 //go:generate go run github.com/vektra/mockery/v2 --name=UserRepo --with-expecter --inpackage --replace-type github.com/raito-io/sdk-go/internal/schema=github.com/raito-io/sdk-go/types
 type UserRepo interface {
-	GetCurrentUser(ctx context.Context) (*sdkTypes.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*sdkTypes.User, error)
 }
 
@@ -72,11 +71,6 @@ func NewDbtService(config *resource_provider.UpdateResourceInput, accessProvider
 }
 
 func (s *DbtService) RunDbt(ctx context.Context, dbtFile string, fullnamePrefix string) (uint32, uint32, uint32, uint32, error) {
-	currentUser, err := s.userRepo.GetCurrentUser(ctx)
-	if err != nil {
-		return 0, 0, 0, 0, fmt.Errorf("get current user: %w", err)
-	}
-
 	manifestData, err := s.loadDbtFile(dbtFile)
 	if err != nil {
 		return 0, 0, 0, 0, fmt.Errorf("load file %s: %w", dbtFile, err)
@@ -92,10 +86,10 @@ func (s *DbtService) RunDbt(ctx context.Context, dbtFile string, fullnamePrefix 
 		return 0, 0, 0, 0, err
 	}
 
-	return s.createAndUpdateAccessProviders(ctx, currentUser, grants, grantIds, masks, maskIds, filters, filterIds, apsToRemove)
+	return s.createAndUpdateAccessProviders(ctx, grants, grantIds, masks, maskIds, filters, filterIds, apsToRemove)
 }
 
-func (s *DbtService) createAndUpdateAccessProviders(ctx context.Context, currentUser *sdkTypes.User, grants map[string]*AccessProviderInput, grantIds map[string]string, masks map[string]*AccessProviderInput, maskIds map[string]string, filters map[string]*AccessProviderInput, filterIds map[string]string, apsToRemove set.Set[string]) (uint32, uint32, uint32, uint32, error) {
+func (s *DbtService) createAndUpdateAccessProviders(ctx context.Context, grants map[string]*AccessProviderInput, grantIds map[string]string, masks map[string]*AccessProviderInput, maskIds map[string]string, filters map[string]*AccessProviderInput, filterIds map[string]string, apsToRemove set.Set[string]) (uint32, uint32, uint32, uint32, error) {
 	numberOfChanges := len(grants) + len(masks) + len(filters) + len(apsToRemove)
 
 	var addedResource, updatedResource, deletedResources, failures, totalChangedMade uint32
@@ -141,13 +135,6 @@ func (s *DbtService) createAndUpdateAccessProviders(ctx context.Context, current
 			s.logger.Debug(fmt.Sprintf("update owners for access provider %q (%q)", name, id))
 
 			_, ownerUpdateErr := s.roleClient.UpdateRoleAssigneesOnAccessProvider(ctx, id, ownerRoleId, apInput.Owners.Slice()...)
-			if ownerUpdateErr != nil {
-				return fmt.Errorf("update owners for access provider %q (%q): %w", name, id, ownerUpdateErr)
-			}
-		} else if found {
-			s.logger.Debug(fmt.Sprintf("no owners to update for access provider %q (%q). Will update owner to current user", name, id))
-
-			_, ownerUpdateErr := s.roleClient.UpdateRoleAssigneesOnAccessProvider(ctx, id, ownerRoleId, currentUser.Id)
 			if ownerUpdateErr != nil {
 				return fmt.Errorf("update owners for access provider %q (%q): %w", name, id, ownerUpdateErr)
 			}
@@ -356,12 +343,12 @@ func (s *DbtService) loadAccessProvidersFromManifest(ctx context.Context, manife
 
 		s.parseGrants(ctx, manifestData, i, grants, source, defaultLocks, doName)
 
-		fErr := s.parseFilters(ctx, manifestData, i, filters, source, doName, defaultLocks, grants)
+		fErr := s.parseFilters(ctx, manifestData, i, filters, source, doName, defaultLocks)
 		if fErr != nil {
 			err = multierror.Append(err, fmt.Errorf("parse filters: %w", fErr))
 		}
 
-		mErr := s.parseMasks(ctx, manifestData, i, masks, doName, source, defaultLocks, grants)
+		mErr := s.parseMasks(ctx, manifestData, i, masks, doName, source, defaultLocks)
 		if mErr != nil {
 			err = multierror.Append(err, fmt.Errorf("parse masks: %w", mErr))
 		}
@@ -374,7 +361,7 @@ func (s *DbtService) loadAccessProvidersFromManifest(ctx context.Context, manife
 	return source, grants, filters, masks, nil
 }
 
-func (s *DbtService) parseMasks(ctx context.Context, manifestData *types.Manifest, i string, masks map[string]*AccessProviderInput, doName string, source string, defaultLocks []sdkTypes.AccessProviderLockDataInput, grants map[string]*AccessProviderInput) error {
+func (s *DbtService) parseMasks(ctx context.Context, manifestData *types.Manifest, i string, masks map[string]*AccessProviderInput, doName string, source string, defaultLocks []sdkTypes.AccessProviderLockDataInput) error {
 	var err error
 
 	for columnIdx, column := range manifestData.Nodes[i].Columns {
@@ -433,20 +420,16 @@ func (s *DbtService) parseMasks(ctx context.Context, manifestData *types.Manifes
 			},
 		})
 
-		if len(manifestData.Nodes[i].Columns[columnIdx].Meta.Raito.Mask.Owners) > 0 {
-			users, ownerErr := s.getIdsOfUsers(ctx, manifestData.Nodes[i].Columns[columnIdx].Meta.Raito.Mask.Owners...)
-			if ownerErr != nil {
-				s.logger.Warn(fmt.Sprintf("get ids of users %v: %v", manifestData.Nodes[i].Columns[columnIdx].Meta.Raito.Mask.Owners, ownerErr))
-			}
-
-			grants[column.Meta.Raito.Mask.Name].Owners.Add(users...)
+		ownerErr := s.handleOwners(ctx, masks[column.Meta.Raito.Mask.Name], column.Meta.Raito.Mask.Owners)
+		if ownerErr != nil {
+			s.logger.Warn(fmt.Sprintf("handle owners for mask %s: %v", column.Meta.Raito.Mask.Name, ownerErr))
 		}
 	}
 
 	return err
 }
 
-func (s *DbtService) parseFilters(ctx context.Context, manifestData *types.Manifest, i string, filters map[string]*AccessProviderInput, source string, doName string, defaultLocks []sdkTypes.AccessProviderLockDataInput, grants map[string]*AccessProviderInput) error {
+func (s *DbtService) parseFilters(ctx context.Context, manifestData *types.Manifest, i string, filters map[string]*AccessProviderInput, source string, doName string, defaultLocks []sdkTypes.AccessProviderLockDataInput) error {
 	var err error
 
 	for filterIdx, filter := range manifestData.Nodes[i].Meta.Raito.Filter {
@@ -474,13 +457,9 @@ func (s *DbtService) parseFilters(ctx context.Context, manifestData *types.Manif
 				Owners: set.NewSet[string](),
 			}
 
-			if len(filter.Owners) > 0 {
-				users, ownerErr := s.getIdsOfUsers(ctx, filter.Owners...)
-				if ownerErr != nil {
-					s.logger.Warn(fmt.Sprintf("get ids of users %v: %v", filter.Owners, ownerErr))
-				}
-
-				grants[filter.Name].Owners.Add(users...)
+			ownerErr := s.handleOwners(ctx, filters[filter.Name], filter.Owners)
+			if ownerErr != nil {
+				s.logger.Warn(fmt.Sprintf("handle owners for filter %s: %v", filter.Name, ownerErr))
 			}
 		} else {
 			err = multierror.Append(err, fmt.Errorf("filter %s already exists", filter.Name))
@@ -517,15 +496,31 @@ func (s *DbtService) parseGrants(ctx context.Context, manifestData *types.Manife
 			},
 		})
 
-		if len(grant.Owners) > 0 {
-			users, ownerErr := s.getIdsOfUsers(ctx, grant.Owners...)
-			if ownerErr != nil {
-				s.logger.Warn(fmt.Sprintf("get ids of users %v: %v", grant.Owners, ownerErr))
-			}
-
-			grants[grant.Name].Owners.Add(users...)
+		err := s.handleOwners(ctx, grants[grant.Name], grant.Owners)
+		if err != nil {
+			s.logger.Warn(fmt.Sprintf("handle owners for grant %s: %v", grant.Name, err))
 		}
 	}
+}
+
+func (s *DbtService) handleOwners(ctx context.Context, ap *AccessProviderInput, owners []string) error {
+	if len(owners) > 0 {
+		users, ownerErr := s.getIdsOfUsers(ctx, owners...)
+		if ownerErr != nil {
+			return fmt.Errorf("get ids of users %v: %w", owners, ownerErr)
+		}
+
+		ap.Owners.Add(users...)
+
+		ap.Input.Locks = append(ap.Input.Locks, sdkTypes.AccessProviderLockDataInput{
+			LockKey: sdkTypes.AccessProviderLockOwnerlock,
+			Details: &sdkTypes.AccessProviderLockDetailsInput{
+				Reason: utils.Ptr(lockReason),
+			},
+		})
+	}
+
+	return nil
 }
 
 func (s *DbtService) getIdsOfUsers(ctx context.Context, emailAddresses ...string) ([]string, error) {
