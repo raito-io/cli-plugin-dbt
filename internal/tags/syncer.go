@@ -3,6 +3,7 @@ package tags
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/raito-io/cli/base/tag"
@@ -23,19 +24,25 @@ type Parser interface {
 	LoadManifest(path string) (*manifest.Manifest, error)
 }
 
+type TagSeparator interface {
+	Parse(tag string) (string, string)
+}
+
 type TagImportService struct {
+	tagSeparator   TagSeparator
 	manifestParser Parser
 	logger         hclog.Logger
 }
 
-func NewTagImportService(manifestParser Parser, logger hclog.Logger) *TagImportService {
+func NewTagImportService(manifestParser Parser, logger hclog.Logger, separator TagSeparator) *TagImportService {
 	return &TagImportService{
+		tagSeparator:   separator,
 		manifestParser: manifestParser,
 		logger:         logger,
 	}
 }
 
-func (t TagImportService) SyncTags(_ context.Context, tagsHandler wrappers.TagHandler, config *tag.TagSyncConfig) ([]string, error) {
+func (t *TagImportService) SyncTags(_ context.Context, tagsHandler wrappers.TagHandler, config *tag.TagSyncConfig) ([]string, error) {
 	manifestFile := config.ConfigMap.GetString(constants.ManifestParameterName)
 
 	manifestData, err := t.manifestParser.LoadManifest(manifestFile)
@@ -45,10 +52,10 @@ func (t TagImportService) SyncTags(_ context.Context, tagsHandler wrappers.TagHa
 
 	prefix := utils.GetFullnamePrefix(config.ConfigMap)
 
-	return loadTagsFromManifest(manifestData, prefix, tagsHandler)
+	return t.loadTagsFromManifest(manifestData, prefix, tagsHandler)
 }
 
-func loadTagsFromManifest(manifestData *manifest.Manifest, fullnamePrefix string, tagsHandler wrappers.TagHandler) ([]string, error) {
+func (t *TagImportService) loadTagsFromManifest(manifestData *manifest.Manifest, fullnamePrefix string, tagsHandler wrappers.TagHandler) ([]string, error) {
 	supportedResourceTypes := set.NewSet("model", "seed", "snapshot")
 
 	source := fmt.Sprintf("dbt-%s", manifestData.Metadata.ProjectName)
@@ -66,7 +73,7 @@ func loadTagsFromManifest(manifestData *manifest.Manifest, fullnamePrefix string
 		doTags := set.NewSet[string](manifestData.Nodes[i].Tags...)
 		doTags.Add(manifestData.Nodes[i].Config.Tags...)
 
-		err := addTags(tagsHandler, doName, source, doTags)
+		err := t.addTags(tagsHandler, doName, source, doTags)
 		if err != nil {
 			return nil, err
 		}
@@ -76,7 +83,7 @@ func loadTagsFromManifest(manifestData *manifest.Manifest, fullnamePrefix string
 			columnTags := set.NewSet[string](manifestData.Nodes[i].Columns[columnName].Tags...)
 			columnTags.Add(manifestData.Nodes[i].Columns[columnName].Config.Tags...)
 
-			err = addTags(tagsHandler, columnFullName, source, columnTags)
+			err = t.addTags(tagsHandler, columnFullName, source, columnTags)
 			if err != nil {
 				return nil, err
 			}
@@ -86,11 +93,13 @@ func loadTagsFromManifest(manifestData *manifest.Manifest, fullnamePrefix string
 	return []string{source}, nil
 }
 
-func addTags(tagsHandler wrappers.TagHandler, doFullName string, source string, tags set.Set[string]) error {
-	for tagValue := range tags {
+func (t *TagImportService) addTags(tagsHandler wrappers.TagHandler, doFullName string, source string, tags set.Set[string]) error {
+	for tagString := range tags {
+		tagKey, tagValue := t.tagSeparator.Parse(tagString)
+
 		err := tagsHandler.AddTags(&tag.TagImportObject{
 			DataObjectFullName: &doFullName,
-			Key:                TagKey,
+			Key:                tagKey,
 			StringValue:        tagValue,
 			Source:             source,
 		})
@@ -101,4 +110,32 @@ func addTags(tagsHandler wrappers.TagHandler, doFullName string, source string, 
 	}
 
 	return nil
+}
+
+type DefaultTagSeparator struct{}
+
+func (d DefaultTagSeparator) Parse(tag string) (string, string) {
+	return TagKey, tag
+}
+
+type DefinedTagSeparator struct {
+	separatorKey string
+}
+
+func (d DefinedTagSeparator) Parse(tag string) (string, string) {
+	split := strings.SplitN(tag, d.separatorKey, 2)
+	if len(split) == 2 {
+		return split[0], split[1]
+	}
+
+	return TagKey, tag
+}
+
+func NewTagSeparator(cfg *tag.TagSyncConfig) TagSeparator {
+	separatorKey := cfg.ConfigMap.GetString(constants.TagSplitKey)
+	if separatorKey == "" {
+		return DefaultTagSeparator{}
+	}
+
+	return DefinedTagSeparator{separatorKey: separatorKey}
 }
