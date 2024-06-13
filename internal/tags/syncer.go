@@ -114,21 +114,21 @@ func (t *TagImportService) addTags(tagsHandler wrappers.TagHandler, doFullName s
 
 type DefaultTagSeparator struct{}
 
-func (d DefaultTagSeparator) Parse(tag string) (string, string) {
-	return TagKey, tag
+func (d DefaultTagSeparator) Parse(tagString string) (string, string) {
+	return TagKey, tagString
 }
 
 type DefinedTagSeparator struct {
 	separatorKey string
 }
 
-func (d DefinedTagSeparator) Parse(tag string) (string, string) {
-	split := strings.SplitN(tag, d.separatorKey, 2)
+func (d DefinedTagSeparator) Parse(tagString string) (string, string) {
+	split := strings.SplitN(tagString, d.separatorKey, 2)
 	if len(split) == 2 {
 		return split[0], split[1]
 	}
 
-	return TagKey, tag
+	return TagKey, tagString
 }
 
 func NewTagSeparator(cfg *tag.TagSyncConfig) TagSeparator {
