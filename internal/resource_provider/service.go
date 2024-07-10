@@ -370,7 +370,7 @@ func (s *DbtService) parseMasks(ctx context.Context, manifestData *types.Manifes
 		}
 
 		if mask, found := masks[column.Meta.Raito.Mask.Name]; found {
-			if mask.Input.Type != nil && column.Meta.Raito.Mask.Type != nil && *column.Meta.Raito.Mask.Type != *mask.Input.Type {
+			if len(mask.Input.DataSources) > 0 && mask.Input.DataSources[0].Type != nil && column.Meta.Raito.Mask.Type != nil && *column.Meta.Raito.Mask.Type != *mask.Input.DataSources[0].Type {
 				err = multierror.Append(err, fmt.Errorf("mask %s already exists with different type", column.Meta.Raito.Mask.Name))
 
 				continue
@@ -399,13 +399,17 @@ func (s *DbtService) parseMasks(ctx context.Context, manifestData *types.Manifes
 		} else {
 			masks[column.Meta.Raito.Mask.Name] = &AccessProviderInput{
 				Input: sdkTypes.AccessProviderInput{
-					Name:       &manifestData.Nodes[i].Columns[columnIdx].Meta.Raito.Mask.Name,
-					Action:     utils.Ptr(models.AccessProviderActionMask),
-					WhatType:   utils.Ptr(sdkTypes.WhoAndWhatTypeStatic),
-					DataSource: &s.dataSourceId,
-					Source:     &source,
-					Type:       column.Meta.Raito.Mask.Type,
-					Locks:      defaultLocks,
+					Name:     &manifestData.Nodes[i].Columns[columnIdx].Meta.Raito.Mask.Name,
+					Action:   utils.Ptr(models.AccessProviderActionMask),
+					WhatType: utils.Ptr(sdkTypes.WhoAndWhatTypeStatic),
+					DataSources: []sdkTypes.AccessProviderDataSourceInput{
+						{
+							DataSource: s.dataSourceId,
+							Type:       column.Meta.Raito.Mask.Type,
+						},
+					},
+					Source: &source,
+					Locks:  defaultLocks,
 				},
 				Owners: set.NewSet[string](),
 			}
@@ -436,10 +440,14 @@ func (s *DbtService) parseFilters(ctx context.Context, manifestData *types.Manif
 		if _, found := filters[filter.Name]; !found {
 			filters[filter.Name] = &AccessProviderInput{
 				Input: sdkTypes.AccessProviderInput{
-					Name:       &manifestData.Nodes[i].Meta.Raito.Filter[filterIdx].Name,
-					Action:     utils.Ptr(models.AccessProviderActionFiltered),
-					WhatType:   utils.Ptr(sdkTypes.WhoAndWhatTypeStatic),
-					DataSource: &s.dataSourceId,
+					Name:     &manifestData.Nodes[i].Meta.Raito.Filter[filterIdx].Name,
+					Action:   utils.Ptr(models.AccessProviderActionFiltered),
+					WhatType: utils.Ptr(sdkTypes.WhoAndWhatTypeStatic),
+					DataSources: []sdkTypes.AccessProviderDataSourceInput{
+						{
+							DataSource: s.dataSourceId,
+						},
+					},
 					PolicyRule: &manifestData.Nodes[i].Meta.Raito.Filter[filterIdx].PolicyRule,
 					Source:     &source,
 					WhatDataObjects: []sdkTypes.AccessProviderWhatInputDO{
@@ -475,12 +483,16 @@ func (s *DbtService) parseGrants(ctx context.Context, manifestData *types.Manife
 			grants[grant.Name] = &AccessProviderInput{
 				Owners: set.NewSet[string](),
 				Input: sdkTypes.AccessProviderInput{
-					Name:       &manifestData.Nodes[i].Meta.Raito.Grant[grandIdx].Name,
-					Action:     utils.Ptr(models.AccessProviderActionGrant),
-					WhatType:   utils.Ptr(sdkTypes.WhoAndWhatTypeStatic),
-					DataSource: &s.dataSourceId,
-					Source:     &source,
-					Locks:      defaultLocks,
+					Name:     &manifestData.Nodes[i].Meta.Raito.Grant[grandIdx].Name,
+					Action:   utils.Ptr(models.AccessProviderActionGrant),
+					WhatType: utils.Ptr(sdkTypes.WhoAndWhatTypeStatic),
+					DataSources: []sdkTypes.AccessProviderDataSourceInput{
+						{
+							DataSource: s.dataSourceId,
+						},
+					},
+					Source: &source,
+					Locks:  defaultLocks,
 				},
 			}
 		}
