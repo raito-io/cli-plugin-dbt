@@ -140,6 +140,8 @@ github.com/raito-io/enumer v0.1.4 h1:r2QqGMjfKwn+yMHo4ybOAWvYON4pLBy+ucVP5niyHK4
 github.com/raito-io/enumer v0.1.4/go.mod h1:+tSaVlYRuVnf2vA7ETf8t7/Mzq/sgvWT/dHeMVOjBu8=
 github.com/raito-io/golang-set v0.0.4 h1:7zk8r1TCE/F9JOOgseIXYx7oZJdC9/j5uivkCYjnCg0=
 github.com/raito-io/golang-set v0.0.4/go.mod h1:ktKACNnQeSpzo0Nes6jDTs74UOau8psJpAesatiEKQE=
+github.com/raito-io/sdk-go v0.0.11 h1:sTPvXY3CKTmNAeuYPU/BPtDh+Ec4CgVv9zGGe11RsTQ=
+github.com/raito-io/sdk-go v0.0.11/go.mod h1:vWOF49tk1nLn9oZeRMcR1W0a+ocfi7JOQ6jsJ5upIOk=
 github.com/rogpeppe/go-internal v1.9.0 h1:73kH8U+JUqXU8lRuOHeVHaa/SZPifC7BkcraZVejAe8=
 github.com/rogpeppe/go-internal v1.9.0/go.mod h1:WtVeX8xhTBvf0smdhujwtBcq4Qrzq/fJaraNFVN+nFs=
 github.com/rs/xid v1.5.0/go.mod h1:trrq9SKmegXys3aeAKXMUTdJsYXVwGY3RLcfgqegfbg=
