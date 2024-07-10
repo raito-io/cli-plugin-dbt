@@ -607,11 +607,15 @@ func TestDbtService_RunDbt(t *testing.T) {
 					})
 
 					client.EXPECT().UpdateAccessProvider(mock.Anything, "apId1", sdkTypes.AccessProviderInput{
-						Name:       utils.Ptr("sales_analysis_dbt"),
-						Action:     utils.Ptr(models.AccessProviderActionGrant),
-						WhatType:   utils.Ptr(sdkTypes.WhoAndWhatTypeStatic),
-						Source:     utils.Ptr("dbt-dbt_bq_demo"),
-						DataSource: utils.Ptr("dsId1"),
+						Name:     utils.Ptr("sales_analysis_dbt"),
+						Action:   utils.Ptr(models.AccessProviderActionGrant),
+						WhatType: utils.Ptr(sdkTypes.WhoAndWhatTypeStatic),
+						Source:   utils.Ptr("dbt-dbt_bq_demo"),
+						DataSources: []sdkTypes.AccessProviderDataSourceInput{
+							{
+								DataSource: "dsId1",
+							},
+						},
 						WhatDataObjects: []sdkTypes.AccessProviderWhatInputDO{
 							{
 								GlobalPermissions: []*string{
@@ -654,7 +658,11 @@ func TestDbtService_RunDbt(t *testing.T) {
 						WhatType:   utils.Ptr(sdkTypes.WhoAndWhatTypeStatic),
 						Source:     utils.Ptr("dbt-dbt_bq_demo"),
 						PolicyRule: utils.Ptr("Country IN (\"France\", \"Belgium\", \"Germany\")"),
-						DataSource: utils.Ptr("dsId1"),
+						DataSources: []sdkTypes.AccessProviderDataSourceInput{
+							{
+								DataSource: "dsId1",
+							},
+						},
 						WhatDataObjects: []sdkTypes.AccessProviderWhatInputDO{
 							{
 								DataObjectByName: []sdkTypes.AccessProviderWhatDoByNameInput{
@@ -682,12 +690,16 @@ func TestDbtService_RunDbt(t *testing.T) {
 					}).Return(&sdkTypes.AccessProvider{Id: "counter_filter_eu_id_1"}, nil).Once()
 
 					client.EXPECT().CreateAccessProvider(mock.Anything, sdkTypes.AccessProviderInput{
-						Name:       utils.Ptr("email_masking"),
-						Action:     utils.Ptr(models.AccessProviderActionMask),
-						WhatType:   utils.Ptr(sdkTypes.WhoAndWhatTypeStatic),
-						Source:     utils.Ptr("dbt-dbt_bq_demo"),
-						Type:       utils.Ptr("SHA256"),
-						DataSource: utils.Ptr("dsId1"),
+						Name:     utils.Ptr("email_masking"),
+						Action:   utils.Ptr(models.AccessProviderActionMask),
+						WhatType: utils.Ptr(sdkTypes.WhoAndWhatTypeStatic),
+						Source:   utils.Ptr("dbt-dbt_bq_demo"),
+						DataSources: []sdkTypes.AccessProviderDataSourceInput{
+							{
+								DataSource: "dsId1",
+								Type:       utils.Ptr("SHA256"),
+							},
+						},
 						WhatDataObjects: []sdkTypes.AccessProviderWhatInputDO{
 							{
 								DataObjectByName: []sdkTypes.AccessProviderWhatDoByNameInput{
