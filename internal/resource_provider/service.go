@@ -366,7 +366,9 @@ func (s *DbtService) loadAccessProvidersFromManifest(ctx context.Context, manife
 func (s *DbtService) parseMasks(ctx context.Context, manifestData *manifest.Manifest, i string, masks map[string]*AccessProviderInput, doName string, source string, defaultLocks []sdkTypes.AccessProviderLockDataInput) error {
 	var err error
 
-	for columnIdx, column := range manifestData.Nodes[i].Columns {
+	for columnIdx := range manifestData.Nodes[i].Columns {
+		column := manifestData.Nodes[i].Columns[columnIdx]
+
 		if column.Meta.Raito.Mask == nil {
 			continue
 		}

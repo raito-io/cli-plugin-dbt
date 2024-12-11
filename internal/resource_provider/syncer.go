@@ -30,9 +30,9 @@ func (r ResourceSyncer) UpdateResources(ctx context.Context, config *resource_pr
 	}
 
 	return &resource_provider.UpdateResourceResult{
-		AddedObjects:   int32(addedResources),
-		UpdatedObjects: int32(updatedResource),
-		DeletedObjects: int32(deletedResources),
-		Failures:       int32(failures),
+		AddedObjects:   int32(addedResources),   //nolint:gosec // safe to cast
+		UpdatedObjects: int32(updatedResource),  //nolint:gosec // safe to cast
+		DeletedObjects: int32(deletedResources), //nolint:gosec // safe to cast
+		Failures:       int32(failures),         //nolint:gosec // safe to cast
 	}, nil
 }
