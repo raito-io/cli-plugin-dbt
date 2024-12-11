@@ -19,7 +19,6 @@ import (
 
 	"github.com/raito-io/cli-plugin-dbt/internal/array"
 	"github.com/raito-io/cli-plugin-dbt/internal/manifest"
-	"github.com/raito-io/cli-plugin-dbt/internal/resource_provider/types"
 	"github.com/raito-io/cli-plugin-dbt/internal/workerpool"
 )
 
@@ -289,13 +288,13 @@ func (s *DbtService) loadExistingAps(ctx context.Context, source string, grants 
 	return grantIds, filterIds, maskIds, apsToRemove, nil
 }
 
-func (s *DbtService) loadDbtFile(dbtFilePath string) (*types.Manifest, error) {
+func (s *DbtService) loadDbtFile(dbtFilePath string) (*manifest.Manifest, error) {
 	jsonBytes, err := os.ReadFile(dbtFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("reading dbt file: %w", err)
 	}
 
-	var result types.Manifest
+	var result manifest.Manifest
 
 	err = json.Unmarshal(jsonBytes, &result)
 	if err != nil {
@@ -305,7 +304,7 @@ func (s *DbtService) loadDbtFile(dbtFilePath string) (*types.Manifest, error) {
 	return &result, nil
 }
 
-func (s *DbtService) loadAccessProvidersFromManifest(ctx context.Context, manifestData *types.Manifest, fullnamePrefix string) (string, map[string]*AccessProviderInput, map[string]*AccessProviderInput, map[string]*AccessProviderInput, error) {
+func (s *DbtService) loadAccessProvidersFromManifest(ctx context.Context, manifestData *manifest.Manifest, fullnamePrefix string) (string, map[string]*AccessProviderInput, map[string]*AccessProviderInput, map[string]*AccessProviderInput, error) {
 	source := _source(manifestData.Metadata.ProjectName)
 
 	grants := make(map[string]*AccessProviderInput)
@@ -341,7 +340,10 @@ func (s *DbtService) loadAccessProvidersFromManifest(ctx context.Context, manife
 		modelName := manifestData.Nodes[i].Name
 		doName := fmt.Sprintf("%s%s.%s.%s", fullnamePrefix, databaseName, schemaName, modelName)
 
-		s.parseGrants(ctx, manifestData, i, grants, source, defaultLocks, doName)
+		gErr := s.parseGrants(ctx, manifestData, i, grants, source, defaultLocks, doName)
+		if gErr != nil {
+			err = multierror.Append(err, fmt.Errorf("parse grants: %w", gErr))
+		}
 
 		fErr := s.parseFilters(ctx, manifestData, i, filters, source, doName, defaultLocks)
 		if fErr != nil {
@@ -361,10 +363,12 @@ func (s *DbtService) loadAccessProvidersFromManifest(ctx context.Context, manife
 	return source, grants, filters, masks, nil
 }
 
-func (s *DbtService) parseMasks(ctx context.Context, manifestData *types.Manifest, i string, masks map[string]*AccessProviderInput, doName string, source string, defaultLocks []sdkTypes.AccessProviderLockDataInput) error {
+func (s *DbtService) parseMasks(ctx context.Context, manifestData *manifest.Manifest, i string, masks map[string]*AccessProviderInput, doName string, source string, defaultLocks []sdkTypes.AccessProviderLockDataInput) error {
 	var err error
 
-	for columnIdx, column := range manifestData.Nodes[i].Columns {
+	for columnIdx := range manifestData.Nodes[i].Columns {
+		column := manifestData.Nodes[i].Columns[columnIdx]
+
 		if column.Meta.Raito.Mask == nil {
 			continue
 		}
@@ -433,7 +437,7 @@ func (s *DbtService) parseMasks(ctx context.Context, manifestData *types.Manifes
 	return err
 }
 
-func (s *DbtService) parseFilters(ctx context.Context, manifestData *types.Manifest, i string, filters map[string]*AccessProviderInput, source string, doName string, defaultLocks []sdkTypes.AccessProviderLockDataInput) error {
+func (s *DbtService) parseFilters(ctx context.Context, manifestData *manifest.Manifest, i string, filters map[string]*AccessProviderInput, source string, doName string, defaultLocks []sdkTypes.AccessProviderLockDataInput) error {
 	var err error
 
 	for filterIdx, filter := range manifestData.Nodes[i].Meta.Raito.Filter {
@@ -477,7 +481,7 @@ func (s *DbtService) parseFilters(ctx context.Context, manifestData *types.Manif
 	return err
 }
 
-func (s *DbtService) parseGrants(ctx context.Context, manifestData *types.Manifest, i string, grants map[string]*AccessProviderInput, source string, defaultLocks []sdkTypes.AccessProviderLockDataInput, doName string) {
+func (s *DbtService) parseGrants(ctx context.Context, manifestData *manifest.Manifest, i string, grants map[string]*AccessProviderInput, source string, defaultLocks []sdkTypes.AccessProviderLockDataInput, doName string) (err error) {
 	for grandIdx, grant := range manifestData.Nodes[i].Meta.Raito.Grant {
 		if _, found := grants[grant.Name]; !found {
 			grants[grant.Name] = &AccessProviderInput{
@@ -491,10 +495,31 @@ func (s *DbtService) parseGrants(ctx context.Context, manifestData *types.Manife
 							DataSource: s.dataSourceId,
 						},
 					},
-					Source: &source,
-					Locks:  defaultLocks,
+					Source:   &source,
+					Locks:    defaultLocks,
+					Category: manifestData.Nodes[i].Meta.Raito.Grant[grandIdx].Category,
 				},
 			}
+		}
+
+		if manifestData.Nodes[i].Meta.Raito.Grant[grandIdx].Type != nil {
+			if grants[grant.Name].Input.DataSources[0].Type != nil && *manifestData.Nodes[i].Meta.Raito.Grant[grandIdx].Type != *grants[grant.Name].Input.DataSources[0].Type {
+				err = multierror.Append(fmt.Errorf("grant %q already exists with different type (%q != %q)", grant.Name, *manifestData.Nodes[i].Meta.Raito.Grant[grandIdx].Type, *grants[grant.Name].Input.DataSources[0].Type))
+
+				continue
+			}
+
+			grants[grant.Name].Input.DataSources[0].Type = manifestData.Nodes[i].Meta.Raito.Grant[grandIdx].Type
+		}
+
+		if manifestData.Nodes[i].Meta.Raito.Grant[grandIdx].Category != nil {
+			if grants[grant.Name].Input.Category != nil && *manifestData.Nodes[i].Meta.Raito.Grant[grandIdx].Category != *grants[grant.Name].Input.Category {
+				err = multierror.Append(fmt.Errorf("grant %q already exists with different category (%q != %q)", grant.Name, *manifestData.Nodes[i].Meta.Raito.Grant[grandIdx].Category, *grants[grant.Name].Input.Category))
+
+				continue
+			}
+
+			grants[grant.Name].Input.Category = manifestData.Nodes[i].Meta.Raito.Grant[grandIdx].Category
 		}
 
 		grants[grant.Name].Input.WhatDataObjects = append(grants[grant.Name].Input.WhatDataObjects, sdkTypes.AccessProviderWhatInputDO{
@@ -508,11 +533,13 @@ func (s *DbtService) parseGrants(ctx context.Context, manifestData *types.Manife
 			},
 		})
 
-		err := s.handleOwners(ctx, grants[grant.Name], grant.Owners)
-		if err != nil {
+		ownerErr := s.handleOwners(ctx, grants[grant.Name], grant.Owners)
+		if ownerErr != nil {
 			s.logger.Warn(fmt.Sprintf("handle owners for grant %s: %v", grant.Name, err))
 		}
 	}
+
+	return err
 }
 
 func (s *DbtService) handleOwners(ctx context.Context, ap *AccessProviderInput, owners []string) error {

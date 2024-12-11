@@ -64,3 +64,28 @@ $> raito run
 This will take the configuration from the `raito.yml` file (in the current working directory) and start a single synchronization.
 
 Note: if you have multiple targets configured in your configuration file, you can run only this target by adding `--only-targets gcp1` at the end of the command.
+
+## Manifest configuration
+### Define a grant
+Grants can be defined on models, seeds and snapshots. Within the `raito` object, defined in the [meta](https://docs.getdbt.com/reference/resource-configs/meta){:target=_blank} property, a `grant` array can be defined.
+A grant can be defined with the following properties:
+* **name** (mandatory): The name of the grant. All grants, defined in the dbt project, with the same name will be combined into one Raito Cloud grant.
+* **permissions**: Set of permissions that should be granted within this grant on the current resource.
+* **global_permissions**: Set of global permissions (`Read`, `Write`, `Admin`) that should be granted with this grant on the current resource.
+* **category**: The category id of the grant. If not provided, the category will be set to the default category.
+* **type**: The technical type of the grant. If not provided, the type will be set to the default type.
+* **owners**: List of owners of the filter. The owners can be defined by their email addresses.
+
+### Define a mask
+Masks can be defined on the columns of models, seeds and snapshots. Within the `raito` object, defined in the [meta](https://docs.getdbt.com/reference/resource-configs/meta){:target=_blank} property, a `mask` can be defined.
+A mask can be defined with the following properties:
+* **name** (mandatory): A name of the mask. This name should be unique within the dbt project.
+* **type**: The mask type that should be used to mask the data. The possible types are defined within the plugin of the corresponding data source. If no type is defined, the default mask of the plugin will be used.
+* **owners**: List of owners of the filter. The owners can be defined by their email addresses.
+
+### Define a filter
+Filters can be defined on models, seeds and snapshots. Within the `raito` object, defined in the [meta](https://docs.getdbt.com/reference/resource-configs/meta){:target=_blank} property, a `filter` can be defined.
+A filter can be defined with the following properties:
+* **name** (mandatory): A name of the filter. This name should be unique within the dbt project.
+* **policy_rule**: Sql statement defining the filter policy. The policy rule should return a boolean value. If the value is `true`, the data will be included in the result set. If the value is `false`, the data will be excluded from the result set.
+* **owners**: List of owners of the filter. The owners can be defined by their email addresses.
